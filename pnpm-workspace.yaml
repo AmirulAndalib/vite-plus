@@ -1,2 +1,3 @@
 packages:
   - docs
+  - crates/vite_workspace/web

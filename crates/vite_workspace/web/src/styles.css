@@ -1,0 +1,48 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: #F6F8FA;
+}
+
+#mermaid-canvas {
+  marker.marker {
+    /* https://github.com/mermaid-js/mermaid/issues/1236#issuecomment-1791138453 */
+    fill: context-stroke;
+    stroke: context-stroke;
+  }
+  .node > rect {
+    transition: stroke .16s, stroke-width .16s;
+  }
+  .flowchart-link {
+    transition: .16s stroke;
+  }
+  .node.highlighted > rect {
+    z-index: 1;
+    stroke: #0969da;
+    stroke-width: 2px;
+    filter: drop-shadow(0px 1px 1px #25292e1a) drop-shadow(0px 3px 6px #25292e1f);
+  }
+  .flowchart-link.highlighted {
+    stroke: #0969da;
+  }
+  .nodeLabel > p {
+    text-align: left;
+    font-size: 12px;
+    color: rgb(89, 99, 110);
+    line-break:auto;
+    &::first-line {
+      font-size: 14px;
+      color: rgb(31, 35, 40);
+      font-weight: bold;
+    }
+  }
+}
