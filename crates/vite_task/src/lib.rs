@@ -289,7 +289,7 @@ pub async fn main<
                     write(&oxlint_config_path, serde_json::to_string(&lint_config)?).await?;
                     args.extend_from_slice(&[
                         "--config".to_string(),
-                        oxlint_config_path.as_path().to_string_lossy().to_string(),
+                        oxlint_config_path.as_path().to_string_lossy().into_owned(),
                     ]);
                 }
                 let exit_status = lint::lint(lint_fn, &mut workspace, args).await?;
