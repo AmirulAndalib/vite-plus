@@ -1,0 +1,4 @@
+[1]> vite-plus command-not-exists # should exit with non-zero code
+[vite+] run error: [Error: Task 'command-not-exists' not found in workspace] {
+  code: 'GenericFailure'
+}

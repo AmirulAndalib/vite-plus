@@ -37,4 +37,7 @@ run({
   vite, // Resolves vite binary for build/dev commands
   test, // Resolves vitest binary for test commands
   resolveUniversalViteConfig,
+}).catch((err) => {
+  console.error('[vite+] run error:', err);
+  process.exit(1);
 });
