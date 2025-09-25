@@ -1,0 +1,61 @@
+[1]> vite run test # skip script3 when script2 failed
+$ echo 'success 1'
+success 1
+
+
+$ node failure.js
+failure
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    Vite+ Task Runner • Execution Summary
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Statistics:   3 tasks • 0 cache hits • 3 cache misses • 1 failed
+Performance:  0% cache hit rate
+
+Task Details:
+────────────────────────────────────────────────
+  [1] script1: $ echo 'success 1' ✓
+      → Cache miss: no previous cache entry found
+  ·······················································
+  [2] script2: $ node failure.js ✗ (exit code: 1)
+      → Cache miss: no previous cache entry found
+  ·······················································
+  [3] test: $ vite run script3 ⊘ (skipped: dependency failed)
+      → Cache miss: no previous cache entry found
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[1]> vite run ready # support nested tasks
+$ echo 'success 1' (✓ cache hit, replaying)
+success 1
+
+
+$ node failure.js
+failure
+
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    Vite+ Task Runner • Execution Summary
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Statistics:   4 tasks • 1 cache hits • 3 cache misses • 1 failed
+Performance:  25% cache hit rate, <variable>ms saved in total
+
+Task Details:
+────────────────────────────────────────────────
+  [1] script1: $ echo 'success 1' ✓
+      → Cache hit - output replayed - <variable>ms saved
+  ·······················································
+  [2] script2: $ node failure.js ✗ (exit code: 1)
+      → Cache miss: no previous cache entry found
+  ·······················································
+  [3] test: $ vite run script3 ⊘ (skipped: dependency failed)
+      → Cache miss: no previous cache entry found
+  ·······················································
+  [4] ready: $ vite run script4 ⊘ (skipped: dependency failed)
+      → Cache miss: no previous cache entry found
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "ready": "vite run test && vite run script4",
+    "test": "vite run script1 && vite run script2 && vite run script3",
+    "script1": "echo 'success 1'",
+    "script2": "node failure.js",
+    "script3": "echo 'success 3'",
+    "script4": "echo 'success 4'"
+  }
+}

@@ -32,6 +32,7 @@ pub struct PreExecutionStatus {
     pub cache_status: CacheStatus,
     pub display_options: DisplayOptions,
 }
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum CacheStatus {
     /// Cache miss with reason.
@@ -127,8 +128,31 @@ impl ExecutionPlan {
     #[tracing::instrument(skip(self, workspace))]
     pub async fn execute(self, workspace: &mut Workspace) -> Result<ExecutionSummary, Error> {
         let mut execution_statuses = Vec::<ExecutionStatus>::with_capacity(self.steps.len());
+        let mut has_failed = false;
         for step in self.steps {
-            execution_statuses.push(Self::execute_resolved_task(step, workspace).await?);
+            if has_failed {
+                // skip executing the task and display the task name and index
+                let display_options = step.display_options;
+                execution_statuses.push(ExecutionStatus {
+                    execution_id: Uuid::new_v4().to_string(),
+                    pre_execution_status: PreExecutionStatus {
+                        display_command: get_display_command(display_options, &step),
+                        task: step,
+                        cache_status: CacheStatus::CacheMiss(CacheMiss::NotFound),
+                        display_options,
+                    },
+                    execution_result: Err(ExecutionFailure::SkippedDueToFailedDependency),
+                });
+                continue;
+            }
+
+            let status = Self::execute_resolved_task(step, workspace).await?;
+            if let Ok(exit_status) = status.execution_result {
+                if exit_status != 0 {
+                    has_failed = true;
+                }
+            }
+            execution_statuses.push(status);
         }
         Ok(ExecutionSummary { execution_statuses })
     }

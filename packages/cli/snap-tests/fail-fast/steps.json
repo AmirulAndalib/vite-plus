@@ -1,0 +1,9 @@
+{
+  "env": {
+    "VITE_DISABLE_AUTO_INSTALL": "1"
+  },
+  "commands": [
+    "vite run test # skip script3 when script2 failed",
+    "vite run ready # support nested tasks"
+  ]
+}
