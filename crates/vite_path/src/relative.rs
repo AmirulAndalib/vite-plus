@@ -324,6 +324,14 @@ mod tests {
     }
 
     #[test]
+    fn normalize_filenames() {
+        let rel_path = RelativePathBuf::new("foo").unwrap();
+        assert_eq!(rel_path.as_str(), "foo");
+        let rel_path = RelativePathBuf::new("foo.json").unwrap();
+        assert_eq!(rel_path.as_str(), "foo.json");
+    }
+
+    #[test]
     fn normalize_dots() {
         let rel_path = RelativePathBuf::new("./foo/./bar/.").unwrap();
         assert_eq!(rel_path.as_str(), "foo/bar")
