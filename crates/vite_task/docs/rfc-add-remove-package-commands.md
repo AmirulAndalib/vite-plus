@@ -75,7 +75,7 @@ vite add -D typescript @types/react
 vite add react -E
 
 # Add peer dependency
-vite add -P react
+vite add --save-peer react
 
 # Add optional dependency
 vite add -O sharp
@@ -86,6 +86,18 @@ vite add @myorg/utils --workspace --filter app  # Add workspace dependency
 vite add lodash -w                       # Add to workspace root
 vite add react --filter "app*"           # Add to multiple packages (pattern)
 vite add utils --filter "!@myorg/core"   # Exclude packages
+```
+
+##### `vite install` Command with `PACKAGES` arguments
+
+To accommodate the user habits and experience of `npm install <PACKAGES>…`, `vite install <PACKAGES>...` will be specially treated as an alias for the add command.
+
+The following commands will be automatically converted to the add command for processing:
+
+```bash
+vite install <PACKAGES>... [OPTIONS]
+
+-> vite add <PACKAGES>... [OPTIONS]
 ```
 
 #### Remove Command
@@ -117,28 +129,40 @@ vite remove -g typescript                # Remove global package
 
 #### Add Command Mapping
 
-| Vite+ Flag             | pnpm                     | yarn                  | npm                         | Description                                         |
-| ---------------------- | ------------------------ | --------------------- | --------------------------- | --------------------------------------------------- |
-| `<packages>`           | `add <packages>`         | `add <packages>`      | `install <packages>`        | Add packages                                        |
-| `--filter <pattern>`   | `--filter <pattern> add` | `workspace <pkg> add` | `install --workspace <pkg>` | Target specific workspace package(s)                |
-| `-w, --workspace-root` | `-w`                     | `-W`                  | `-w`                        | Add to workspace root (ignore-workspace-root-check) |
-| `--workspace`          | `--workspace`            | N/A                   | N/A                         | Only add if found in workspace (pnpm-specific)      |
-| `-D, --save-dev`       | `-D`                     | `--dev` / `-D`        | `--save-dev` / `-D`         | Add as dev dependency                               |
-| `-P, --save-peer`      | `--save-peer`            | `--peer` / `-P`       | `--save-peer`               | Add as peer dependency                              |
-| `-O, --save-optional`  | `-O`                     | `--optional` / `-O`   | `--save-optional` / `-O`    | Add as optional dependency                          |
-| `-E, --save-exact`     | `-E`                     | `--exact` / `-E`      | `--save-exact` / `-E`       | Save exact version                                  |
-| `-g, --global`         | `-g`                     | `global add`          | `--global` / `-g`           | Install globally                                    |
+- https://pnpm.io/cli/add#options
+- https://yarnpkg.com/cli/add#options
+- https://docs.npmjs.com/cli/v11/commands/npm-install#description
+
+| Vite+ Flag                           | pnpm                     | yarn                  | npm                         | Description                                         |
+| ------------------------------------ | ------------------------ | --------------------- | --------------------------- | --------------------------------------------------- |
+| `<packages>`                         | `add <packages>`         | `add <packages>`      | `install <packages>`        | Add packages                                        |
+| `--filter <pattern>`                 | `--filter <pattern> add` | `workspace <pkg> add` | `install --workspace <pkg>` | Target specific workspace package(s)                |
+| `-w, --workspace-root`               | `-w`                     | `-W`                  | `-w`                        | Add to workspace root (ignore-workspace-root-check) |
+| `--workspace`                        | `--workspace`            | N/A                   | N/A                         | Only add if found in workspace (pnpm-specific)      |
+| `-P, --save-prod`                    | `--save-prod` / `-P`     | N/A                   | `--save-prod` / `-P`        | Save to `dependencies`. The default behavior        |
+| `-D, --save-dev`                     | `-D`                     | `--dev` / `-D`        | `--save-dev` / `-D`         | Save to `devDependencies`                           |
+| `--save-peer`                        | `--save-peer`            | `--peer` / `-P`       | `--save-peer`               | Save to `peerDependencies` and `devDependencies`    |
+| `-O, --save-optional`                | `-O`                     | `--optional` / `-O`   | `--save-optional` / `-O`    | Save to `optionalDependencies`                      |
+| `-E, --save-exact`                   | `-E`                     | `--exact` / `-E`      | `--save-exact` / `-E`       | Save exact version                                  |
+| `-g, --global`                       | `-g`                     | `global add`          | `--global` / `-g`           | Install globally                                    |
+| `--save-catalog`                     | `--save-catalog`         | `--save-catalog`      | N/A                         | Save the new dependency to the default catalog      |
+| `--save-catalog-name <catalog_name>` | SAME                     | N/A                   | N/A                         | Save the new dependency to the specified catalog    |
+| `--allow-build <names>`              | SAME                     | N/A                   | N/A                         | A list of package names allowed to run postinstall  |
 
 **Note**: For pnpm, `--filter` must come before the command (e.g., `pnpm --filter app add react`). For yarn/npm, it's integrated into the command structure.
 
 #### Remove Command Mapping
 
-| Vite+ Flag             | pnpm                        | yarn                     | npm                           | Description                          |
-| ---------------------- | --------------------------- | ------------------------ | ----------------------------- | ------------------------------------ |
-| `<packages>`           | `remove <packages>`         | `remove <packages>`      | `uninstall <packages>`        | Remove packages                      |
-| `--filter <pattern>`   | `--filter <pattern> remove` | `workspace <pkg> remove` | `uninstall --workspace <pkg>` | Target specific workspace package(s) |
-| `-w, --workspace-root` | `-w`                        | (default)                | (default)                     | Remove from workspace root           |
-| `-g, --global`         | `-g`                        | `global remove`          | `--global` / `-g`             | Remove global packages               |
+| Vite+ Flag             | pnpm                        | yarn                     | npm                           | Description                                    |
+| ---------------------- | --------------------------- | ------------------------ | ----------------------------- | ---------------------------------------------- |
+| `<packages>`           | `remove <packages>`         | `remove <packages>`      | `uninstall <packages>`        | Remove packages                                |
+| `-D, --save-dev`       | `-D`                        | `--dev` / `-D`           | `--save-dev` / `-D`           | Only remove from `devDependencies`             |
+| `-O, --save-optional`  | `-O`                        | `--optional` / `-O`      | `--save-optional` / `-O`      | Only remove from `optionalDependencies`        |
+| `-P, --save-prod`      | `-P`                        | `--save-prod` / `-P`     | `--save-prod` / `-P`          | Only remove from `dependencies`                |
+| `--filter <pattern>`   | `--filter <pattern> remove` | `workspace <pkg> remove` | `uninstall --workspace <pkg>` | Target specific workspace package(s)           |
+| `-w, --workspace-root` | `-w`                        | (default)                | (default)                     | Remove from workspace root                     |
+| `-r, --recursive`      | `-r`                        | `--recursive` / `-r`     | `--recursive` / `-r`          | Remove recursively from all workspace packages |
+| `-g, --global`         | `-g`                        | `global remove`          | `--global` / `-g`             | Remove global packages                         |
 
 **Note**: Similar to add, `--filter` must precede the command for pnpm.
 
