@@ -27,6 +27,9 @@ export function replaceUnstableOutput(output: string, cwd?: string) {
     .replaceAll(/WARN\s+Skip\s+adding .+?\n/g, '')
     .replaceAll(/Scope: all \d+ workspace projects/g, 'Scope: all <variable> workspace projects')
     .replaceAll(/\++\n/g, '+<repeat>\n')
+    // ignore yarn YN0013, because it's unstable output, only exists on CI environment
+    // ➤ YN0013: │ A package was added to the project (+ 0.7 KiB).
+    .replaceAll(/➤ YN0013:[^\n]+\n/g, '')
     // replace size for tsdown
     .replaceAll(/ \d+(\.\d+)? ([km]B)/g, ' <variable> $2');
 }

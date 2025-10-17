@@ -1,6 +1,7 @@
 use petgraph::stable_graph::StableGraph;
-use vite_package_manager::package_manager::{
-    AddCommandOptions, PackageManager, SaveDependencyType,
+use vite_package_manager::{
+    add::{AddCommandOptions, SaveDependencyType},
+    package_manager::PackageManager,
 };
 use vite_path::AbsolutePathBuf;
 
@@ -29,11 +30,12 @@ impl AddCommand {
         save_dependency_type: Option<SaveDependencyType>,
         save_exact: bool,
         save_catalog_name: Option<&str>,
-        filters: &[String],
+        filters: Option<&[String]>,
         workspace_root: bool,
         workspace_only: bool,
         global: bool,
-        pm_args: &[String],
+        allow_build: Option<&str>,
+        pass_through_args: Option<&[String]>,
     ) -> Result<ExecutionSummary, Error> {
         if packages.is_empty() {
             return Err(Error::NoPackagesSpecified);
@@ -52,7 +54,8 @@ impl AddCommand {
             workspace_only,
             global,
             save_catalog_name,
-            pm_args,
+            allow_build,
+            pass_through_args,
         };
         let resolve_command = package_manager.resolve_add_command(&add_command_options);
 
@@ -103,7 +106,7 @@ mod tests {
 
         let cmd = AddCommand::new(workspace_root);
         let result =
-            cmd.execute(&vec![], None, false, None, &vec![], false, false, false, &vec![]).await;
+            cmd.execute(&vec![], None, false, None, None, false, false, false, None, None).await;
 
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), Error::NoPackagesSpecified));

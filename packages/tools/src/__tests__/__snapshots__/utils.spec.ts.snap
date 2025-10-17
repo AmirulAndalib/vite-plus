@@ -55,3 +55,8 @@ foo/v<semver>
 foo@<semver>
 bar@v<semver>"
 `;
+
+exports[`replaceUnstableOutput > replace yarn YN0013 1`] = `
+"➤ YN0000: ┌ Fetch step
+➤ YN0000: └ Completed"
+`;

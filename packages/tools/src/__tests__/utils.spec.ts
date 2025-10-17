@@ -83,4 +83,13 @@ Done in 171ms using pnpm v10.16.1
     `;
     expect(replaceUnstableOutput(output.trim())).toMatchSnapshot();
   });
+
+  test('replace yarn YN0013', () => {
+    const output = `
+➤ YN0000: ┌ Fetch step
+➤ YN0013: │ A package was added to the project (+ 0.7 KiB).
+➤ YN0000: └ Completed
+    `;
+    expect(replaceUnstableOutput(output.trim())).toMatchSnapshot();
+  });
 });

@@ -26,7 +26,7 @@ use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use tokio::fs::write;
 pub(crate) use vite_error::Error;
-use vite_package_manager::package_manager::SaveDependencyType;
+use vite_package_manager::add::SaveDependencyType;
 use vite_path::AbsolutePathBuf;
 use vite_str::Str;
 
@@ -128,16 +128,20 @@ pub enum Commands {
         save_exact: bool,
 
         /// Save the new dependency to the specified catalog name.
-        /// Example: `vite add react --save-catalog-name react18`
+        /// Example: `vite add vue --save-catalog-name vue3`
         #[arg(long, value_name = "CATALOG_NAME")]
         save_catalog_name: Option<String>,
         /// Save the new dependency to the default catalog
         #[arg(long)]
         save_catalog: bool,
 
+        /// A list of package names allowed to run postinstall
+        #[arg(long, value_name = "NAMES")]
+        allow_build: Option<String>,
+
         /// Filter packages in monorepo (can be used multiple times)
         #[arg(long, value_name = "PATTERN")]
-        filter: Vec<String>,
+        filter: Option<Vec<String>>,
 
         /// Add to workspace root (ignore-workspace-root-check)
         #[arg(short = 'w', long)]
@@ -154,9 +158,9 @@ pub enum Commands {
         /// Packages to add
         packages: Vec<String>,
 
-        /// Additional arguments to pass to the package manager
+        /// Additional arguments to pass through to the package manager
         #[arg(last = true, allow_hyphen_values = true)]
-        pm_args: Vec<String>,
+        pass_through_args: Option<Vec<String>>,
     },
     /// Install command.
     /// It will be passed to the package manager's install command currently.
@@ -231,11 +235,12 @@ async fn execute_add_command(
     save_exact: bool,
     save_catalog: bool,
     save_catalog_name: Option<&str>,
-    filter: &[String],
+    filter: Option<&[String]>,
     workspace_root: bool,
     workspace: bool,
     global: bool,
-    pm_args: &[String],
+    allow_build: Option<&str>,
+    pass_through_args: Option<&[String]>,
 ) -> Result<ExecutionSummary, Error> {
     let save_dependency_type = if save_dev {
         Some(SaveDependencyType::Dev)
@@ -261,7 +266,8 @@ async fn execute_add_command(
             workspace_root,
             workspace,
             global,
-            pm_args,
+            allow_build,
+            pass_through_args,
         )
         .await
 }
@@ -525,7 +531,8 @@ pub async fn main<
             save_catalog,
             save_catalog_name,
             global,
-            pm_args,
+            allow_build,
+            pass_through_args,
         } => {
             execute_add_command(
                 cwd,
@@ -537,11 +544,12 @@ pub async fn main<
                 *save_exact,
                 *save_catalog,
                 save_catalog_name.as_deref(),
-                filter,
+                filter.as_deref(),
                 *workspace_root,
                 *workspace,
                 *global,
-                pm_args,
+                allow_build.as_deref(),
+                pass_through_args.as_deref(),
             )
             .await?
         }
@@ -561,7 +569,8 @@ pub async fn main<
                 save_catalog,
                 save_catalog_name,
                 global,
-                pm_args,
+                allow_build,
+                pass_through_args,
             }) = parse_install_as_add(args)
             {
                 execute_add_command(
@@ -574,11 +583,12 @@ pub async fn main<
                     save_exact,
                     save_catalog,
                     save_catalog_name.as_deref(),
-                    &filter,
+                    filter.as_deref(),
                     workspace_root,
                     workspace,
                     global,
-                    &pm_args,
+                    allow_build.as_deref(),
+                    pass_through_args.as_deref(),
                 )
                 .await?
             } else {
@@ -1258,7 +1268,7 @@ mod tests {
                 assert_eq!(packages, vec!["typescript", "eslint"]);
                 assert!(save_dev);
                 assert!(save_exact);
-                assert_eq!(filter, vec!["app"]);
+                assert_eq!(filter.unwrap(), vec!["app"]);
             } else {
                 panic!("Expected Add command");
             }
@@ -1275,7 +1285,7 @@ mod tests {
                 &args.commands
             {
                 assert_eq!(packages, &vec!["react".to_string()]);
-                assert!(filter.is_empty());
+                assert!(filter.is_none());
                 assert!(!workspace_root);
                 assert!(!workspace);
             } else {
@@ -1288,7 +1298,7 @@ mod tests {
             } = &args.commands
             {
                 assert_eq!(packages, &vec!["react".to_string()]);
-                assert!(filter.is_empty());
+                assert!(filter.is_none());
                 assert!(!workspace_root);
                 assert!(!workspace);
                 assert!(save_peer);
@@ -1304,7 +1314,7 @@ mod tests {
                 &args.commands
             {
                 assert_eq!(packages, &vec!["react".to_string()]);
-                assert!(filter.is_empty());
+                assert!(filter.is_none());
                 assert!(workspace_root);
                 assert!(!workspace);
             } else {
@@ -1315,7 +1325,7 @@ mod tests {
                 &args.commands
             {
                 assert_eq!(packages, &vec!["react".to_string()]);
-                assert!(filter.is_empty());
+                assert!(filter.is_none());
                 assert!(workspace_root);
                 assert!(!workspace);
             } else {
@@ -1328,7 +1338,7 @@ mod tests {
                 &args.commands
             {
                 assert_eq!(packages, &vec!["react".to_string()]);
-                assert!(filter.is_empty());
+                assert!(filter.is_none());
                 assert!(workspace_root);
                 assert!(!workspace);
             } else {
@@ -1364,11 +1374,46 @@ mod tests {
             if let Commands::Add { filter, workspace_root, workspace, packages, save_dev, .. } =
                 &args.commands
             {
-                assert_eq!(filter, &vec!["app"]);
+                assert_eq!(filter, &Some(vec!["app".to_string()]));
                 assert!(workspace_root);
                 assert!(workspace);
                 assert_eq!(packages, &vec!["typescript"]);
                 assert!(save_dev);
+            } else {
+                panic!("Expected Add command");
+            }
+        }
+
+        #[test]
+        fn test_args_add_command_with_allow_build() {
+            let args = Args::try_parse_from(&[
+                "vite-plus",
+                "add",
+                "--filter",
+                "app",
+                "-w",
+                "--workspace",
+                "typescript",
+                "-D",
+                "--allow-build=react,napi",
+            ])
+            .unwrap();
+            if let Commands::Add {
+                filter,
+                workspace_root,
+                workspace,
+                packages,
+                save_dev,
+                allow_build,
+                ..
+            } = &args.commands
+            {
+                assert_eq!(filter, &Some(vec!["app".to_string()]));
+                assert!(workspace_root);
+                assert!(workspace);
+                assert_eq!(packages, &vec!["typescript"]);
+                assert!(save_dev);
+                assert_eq!(allow_build, &Some("react,napi".to_string()));
             } else {
                 panic!("Expected Add command");
             }
@@ -1387,8 +1432,57 @@ mod tests {
             ])
             .unwrap();
             if let Commands::Add { filter, packages, .. } = &args.commands {
-                assert_eq!(filter, &vec!["app", "web"]);
+                assert_eq!(filter, &Some(vec!["app".to_string(), "web".to_string()]));
                 assert_eq!(packages, &vec!["react"]);
+            } else {
+                panic!("Expected Add command");
+            }
+        }
+
+        #[test]
+        fn test_args_add_command_invalid_filter() {
+            let args = Args::try_parse_from(&["vite-plus", "add", "react", "--filter"]);
+            assert!(args.is_err());
+        }
+
+        #[test]
+        fn test_args_add_command_with_pass_through_args() {
+            let args = Args::try_parse_from(&[
+                "vite-plus",
+                "add",
+                "react",
+                "--",
+                "--watch",
+                "--mode=production",
+                "--use-stderr",
+            ])
+            .unwrap();
+            if let Commands::Add { packages, pass_through_args, .. } = &args.commands {
+                assert_eq!(packages, &vec!["react"]);
+                assert_eq!(
+                    pass_through_args,
+                    &Some(vec![
+                        "--watch".to_string(),
+                        "--mode=production".to_string(),
+                        "--use-stderr".to_string()
+                    ])
+                );
+            } else {
+                panic!("Expected Add command");
+            }
+
+            let args = Args::try_parse_from(&[
+                "vite-plus",
+                "add",
+                "react",
+                "napi",
+                "--",
+                "--allow-build=react,napi",
+            ])
+            .unwrap();
+            if let Commands::Add { packages, pass_through_args, .. } = &args.commands {
+                assert_eq!(packages, &vec!["react", "napi"]);
+                assert_eq!(pass_through_args, &Some(vec!["--allow-build=react,napi".to_string()]));
             } else {
                 panic!("Expected Add command");
             }
