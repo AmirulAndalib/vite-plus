@@ -32,6 +32,9 @@ jobs:
 
   e2e-test:
     name: ${{ matrix.project.name }} E2E test
+    env:
+      # For packing manager install from github package registry
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     permissions:
       contents: read
       packages: read
@@ -50,6 +53,19 @@ jobs:
             command: |
               pnpm run --filter="@skeletonlabs/*" --filter="!*skeleton.dev" --sequential build
               pnpm test
+          - name: rollipop
+            node-version: 22
+            skip-install: true
+            command: |
+              vite install --no-frozen-lockfile
+              vite run -r build
+              vite run lint
+              vite run -r typecheck
+              vite run format
+              vite run @rollipop/common#test
+              vite run @rollipop/core#test
+              vite run @rollipop/dev-server#test
+
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: ./.github/actions/clone
@@ -97,7 +113,12 @@ jobs:
       - name: Install vite-plus from tgz in ${{ matrix.project.name }}
         working-directory: ecosystem-ci/${{ matrix.project.name }}
         run: |
+          # avoid the vite migration using the wrong ignore file
+          rm -f ../.gitignore
           node ../patch-project.ts ${{ matrix.project.name }}
+          if [ -n "${{ matrix.project.skip-install }}" ]; then
+            exit 0
+          fi
           pnpm install --no-frozen-lockfile
           pnpm playwright install --with-deps
 
