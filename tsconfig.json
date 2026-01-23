@@ -16,11 +16,13 @@
     "verbatimModuleSyntax": true
   },
   "exclude": [
+    "docs",
     "ecosystem-ci",
     "packages/cli/snap-tests",
     "packages/global/snap-tests",
     "rolldown-vite",
     "rolldown",
     "target"
-  ]
+  ],
+  "references": [{ "path": "./docs/.vitepress" }] 
 }
