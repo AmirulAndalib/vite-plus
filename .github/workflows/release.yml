@@ -2,6 +2,15 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      npm_tag:
+        description: 'npm tag for publish'
+        required: true
+        default: 'latest'
+        type: choice
+        options:
+          - latest
+          - test
 
 permissions: {}
 
@@ -9,6 +18,7 @@ env:
   RELEASE_BUILD: 'true'
   DEBUG: 'napi:*'
   VERSION: 0.0.0-${{ github.sha }}
+  NPM_TAG: ${{ inputs.npm_tag }}
 
 jobs:
   build-rust:
@@ -226,10 +236,10 @@ jobs:
 
       - name: Publish
         run: |
-          pnpm publish --filter=./packages/core --access public --no-git-checks
-          pnpm publish --filter=./packages/test --access public --no-git-checks
-          pnpm publish --filter=./packages/cli --access public --no-git-checks
-          pnpm publish --filter=./packages/global --access public --no-git-checks
+          pnpm publish --filter=./packages/core --tag ${{ inputs.npm_tag }} --access public --no-git-checks
+          pnpm publish --filter=./packages/test --tag ${{ inputs.npm_tag }} --access public --no-git-checks
+          pnpm publish --filter=./packages/cli --tag ${{ inputs.npm_tag }} --access public --no-git-checks
+          pnpm publish --filter=./packages/global --tag ${{ inputs.npm_tag }} --access public --no-git-checks
 
       - name: Create release body
         run: |
