@@ -98,7 +98,7 @@ impl NodeProvider {
     ///
     /// # Arguments
     /// * `version_req` - A semver range requirement (e.g., "^20.18.0")
-    /// * `cache_dir` - The cache directory path (e.g., `~/.cache/vite/js_runtime`)
+    /// * `cache_dir` - The cache directory path (e.g., `~/.cache/vite-plus/js_runtime`)
     ///
     /// # Returns
     /// The highest LTS cached version that satisfies the requirement, or the
@@ -175,16 +175,20 @@ impl NodeProvider {
     /// Fetch the version index from nodejs.org/dist/index.json with HTTP caching.
     ///
     /// Uses ETag-based conditional requests to minimize bandwidth when cache expires.
+    /// If a network error occurs and a local cache exists (even if expired), returns
+    /// the cached version with a warning log instead of failing.
     ///
     /// # Errors
     ///
-    /// Returns an error if the download fails or the JSON is invalid.
+    /// Returns an error only if the download fails and no local cache exists.
     pub async fn fetch_version_index(&self) -> Result<Vec<NodeVersionEntry>, Error> {
         let cache_dir = crate::cache::get_cache_dir()?;
         let cache_path = cache_dir.join("node/index_cache.json");
 
         // Try to load from cache
-        if let Some(cache) = load_cache(&cache_path).await {
+        let cached = load_cache(&cache_path).await;
+
+        if let Some(ref cache) = cached {
             let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
             // If cache is still fresh, use it
@@ -193,13 +197,13 @@ impl NodeProvider {
                     "Using cached version index (expires in {}s)",
                     cache.expires_at - now
                 );
-                return Ok(cache.versions);
+                return Ok(cache.versions.clone());
             }
 
             // Cache expired - try conditional request with ETag if available
             if let Some(etag) = &cache.etag {
                 tracing::debug!("Cache expired, trying conditional request with ETag");
-                match self.fetch_with_etag(etag, &cache, &cache_path).await {
+                match self.fetch_with_etag(etag, cache, &cache_path).await {
                     Ok(versions) => return Ok(versions),
                     Err(e) => {
                         tracing::debug!("Conditional request failed: {e}, doing full fetch");
@@ -210,8 +214,18 @@ impl NodeProvider {
             }
         }
 
-        // Full fetch
-        self.fetch_and_cache(&cache_path).await
+        // Full fetch - if it fails and we have a cached version, use it
+        match self.fetch_and_cache(&cache_path).await {
+            Ok(versions) => Ok(versions),
+            Err(e) => {
+                if let Some(cache) = cached {
+                    tracing::warn!("Failed to fetch version index: {e}, using expired cache");
+                    Ok(cache.versions)
+                } else {
+                    Err(e)
+                }
+            }
+        }
     }
 
     /// Try conditional fetch with ETag, returns cached versions if 304
