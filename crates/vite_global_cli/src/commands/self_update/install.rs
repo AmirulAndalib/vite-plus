@@ -488,10 +488,9 @@ mod tests {
     async fn test_cleanup_old_versions_with_nonexistent_dir() {
         // Verifies that cleanup_old_versions propagates errors on non-existent dir.
         // In the real flow, such errors from post-swap operations should be non-fatal.
-        let non_existent = AbsolutePathBuf::new(std::path::PathBuf::from(
-            "/tmp/non-existent-self-update-test-dir",
-        ))
-        .unwrap();
+        let non_existent =
+            AbsolutePathBuf::new(std::env::temp_dir().join("non-existent-self-update-test-dir"))
+                .unwrap();
         let result = cleanup_old_versions(&non_existent, 5, &[]).await;
         assert!(result.is_err(), "cleanup_old_versions should error on non-existent dir");
     }
