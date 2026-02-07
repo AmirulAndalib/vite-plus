@@ -1,58 +1,65 @@
 use std::process::ExitStatus;
 
-use vite_install::{commands::update::UpdateCommandOptions, package_manager::PackageManager};
+use vite_install::{
+    commands::outdated::{Format, OutdatedCommandOptions},
+    package_manager::PackageManager,
+};
 use vite_path::AbsolutePathBuf;
 
-use crate::Error;
+use super::prepend_js_runtime_to_path_env;
+use crate::error::Error;
 
-/// Update command for updating packages to their latest versions.
+/// Outdated command for checking outdated packages.
 ///
 /// This command automatically detects the package manager and translates
-/// the update command to the appropriate package manager-specific syntax.
-pub struct UpdateCommand {
+/// the outdated command to the appropriate package manager-specific syntax.
+pub struct OutdatedCommand {
     cwd: AbsolutePathBuf,
 }
 
-impl UpdateCommand {
+impl OutdatedCommand {
     pub fn new(cwd: AbsolutePathBuf) -> Self {
         Self { cwd }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn execute(
         self,
         packages: &[String],
-        latest: bool,
-        global: bool,
+        long: bool,
+        format: Option<Format>,
         recursive: bool,
         filters: Option<&[String]>,
         workspace_root: bool,
-        dev: bool,
         prod: bool,
-        interactive: bool,
+        dev: bool,
         no_optional: bool,
-        no_save: bool,
-        workspace_only: bool,
+        compatible: bool,
+        sort_by: Option<&str>,
+        global: bool,
         pass_through_args: Option<&[String]>,
     ) -> Result<ExitStatus, Error> {
+        prepend_js_runtime_to_path_env(&self.cwd).await?;
+
         // Detect package manager
         let package_manager = PackageManager::builder(&self.cwd).build_with_default().await?;
 
-        let update_command_options = UpdateCommandOptions {
+        let outdated_command_options = OutdatedCommandOptions {
             packages,
-            latest,
-            global,
+            long,
+            format,
             recursive,
             filters,
             workspace_root,
-            dev,
             prod,
-            interactive,
+            dev,
             no_optional,
-            no_save,
-            workspace_only,
+            compatible,
+            sort_by,
+            global,
             pass_through_args,
         };
-        package_manager.run_update_command(&update_command_options, &self.cwd).await
+        Ok(package_manager.run_outdated_command(&outdated_command_options, &self.cwd).await?)
     }
 }
 
@@ -61,14 +68,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_update_command_new() {
+    fn test_outdated_command_new() {
         let workspace_root = if cfg!(windows) {
             AbsolutePathBuf::new("C:\\test".into()).unwrap()
         } else {
             AbsolutePathBuf::new("/test".into()).unwrap()
         };
 
-        let cmd = UpdateCommand::new(workspace_root.clone());
+        let cmd = OutdatedCommand::new(workspace_root.clone());
         assert_eq!(cmd.cwd, workspace_root);
     }
 }

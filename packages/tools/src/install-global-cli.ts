@@ -10,14 +10,14 @@ export function installGlobalCli() {
   });
 
   const binName = positionals[0];
-  if (!binName || !['vp', 'vite'].includes(binName)) {
-    console.error('Usage: tool install-global-cli <vp|vite>');
+  if (!binName || !['vp', 'vp-dev'].includes(binName)) {
+    console.error('Usage: tool install-global-cli <vp|vp-dev>');
     process.exit(1);
   }
 
   console.log(`Installing global CLI with bin name: ${binName}`);
 
-  if (binName === 'vite') {
+  if (binName === 'vp') {
     // CI: use original package.json settings
     execSync('npm install -g ./packages/global --force', {
       stdio: 'inherit',
@@ -31,7 +31,7 @@ export function installGlobalCli() {
   const packageJson = JSON.parse(originalContent);
 
   packageJson.name = 'vite-plus-cli-dev';
-  packageJson.bin = { vp: './bin/vite' };
+  packageJson.bin = { 'vp-dev': './bin/wrapper.js' };
 
   try {
     writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');

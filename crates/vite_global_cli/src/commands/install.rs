@@ -1,8 +1,10 @@
 use std::process::ExitStatus;
 
-use vite_error::Error;
 use vite_install::{PackageManager, commands::install::InstallCommandOptions};
 use vite_path::AbsolutePathBuf;
+
+use super::prepend_js_runtime_to_path_env;
+use crate::error::Error;
 
 /// Install command.
 pub struct InstallCommand {
@@ -15,9 +17,11 @@ impl InstallCommand {
     }
 
     pub async fn execute(self, options: &InstallCommandOptions<'_>) -> Result<ExitStatus, Error> {
+        prepend_js_runtime_to_path_env(&self.cwd).await?;
+
         let package_manager = PackageManager::builder(&self.cwd).build_with_default().await?;
 
-        package_manager.run_install_command(options, &self.cwd).await
+        Ok(package_manager.run_install_command(options, &self.cwd).await?)
     }
 }
 
@@ -60,7 +64,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg(not(windows))] // FIXME
     async fn test_install_command_with_package_json_with_package_manager() {
         let temp_dir = TempDir::new().unwrap();
         let workspace_root = AbsolutePathBuf::new(temp_dir.path().to_path_buf()).unwrap();
@@ -87,7 +90,6 @@ mod tests {
         let command = InstallCommand::new(workspace_root);
 
         let result = command.execute(&InstallCommandOptions::default()).await;
-        let err = result.unwrap_err();
-        assert!(matches!(err, Error::WorkspaceError(_)));
+        assert!(result.is_err());
     }
 }

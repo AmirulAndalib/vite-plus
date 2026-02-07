@@ -1,7 +1,7 @@
-> vite -h # show help message
+> vp -h # show help message
 Vite+/<semver>
 
-Usage: vite <COMMAND>
+Usage: vp [COMMAND]
 
 Vite+ Commands:
   dev        Run the development server
@@ -30,23 +30,23 @@ Package Manager Commands:
   why        Show why a package is installed
 
 Options:
-  -h, --help     Print help
   -V, --version  Print version
+  -h, --help     Print help
 
-> vite -V # show version
+> vp -V # show version
 VITE+(⚡︎) - The Unified Toolchain for the Web
 
 PACKAGE VERSIONS:
   vite-plus-cli: v<semver>
   vite-plus:     Not found
 
-> vite install -h # show install help message
+> vp install -h # show install help message
 Install all dependencies, or add packages if package names are provided
 
-Usage: vite install [OPTIONS] [PACKAGES]... [-- <PASS_THROUGH_ARGS>...]
+Usage: vp install [OPTIONS] [PACKAGES]... [-- <PASS_THROUGH_ARGS>...]
 
 Arguments:
-  [PACKAGES]...           Packages to add (if provided, acts as `vite add`)
+  [PACKAGES]...           Packages to add (if provided, acts as `vp add`)
   [PASS_THROUGH_ARGS]...  Additional arguments to pass through to the package manager
 
 Options:
@@ -62,7 +62,7 @@ Options:
       --ignore-scripts      Do not run lifecycle scripts
       --no-lockfile         Don't read or generate lockfile
       --fix-lockfile        Fix broken lockfile entries (pnpm and yarn@2+ only)
-      --shamefully-hoist    Create flat node_modules (pnpm only)
+      --shamefully-hoist    Create flat `node_modules` (pnpm only)
       --resolution-only     Re-run resolution for peer dependency analysis (pnpm only)
       --silent              Suppress output (silent mode)
       --filter <PATTERN>    Filter packages in monorepo (can be used multiple times)
@@ -74,47 +74,34 @@ Options:
   -g, --global              Install globally (only when adding packages)
   -h, --help                Print help
 
-> vite add -h # show add help message
+> vp add -h # show add help message
 Add packages to dependencies
 
-Usage: vite add [OPTIONS] <PACKAGES>... [-- <PASS_THROUGH_ARGS>...]
+Usage: vp add [OPTIONS] <PACKAGES>... [-- <PASS_THROUGH_ARGS>...]
 
 Arguments:
   <PACKAGES>...           Packages to add
   [PASS_THROUGH_ARGS]...  Additional arguments to pass through to the package manager
 
 Options:
-  -P, --save-prod
-          Save to `dependencies` (default)
-  -D, --save-dev
-          Save to `devDependencies`
-      --save-peer
-          Save to `peerDependencies` and `devDependencies`
-  -O, --save-optional
-          Save to `optionalDependencies`
-  -E, --save-exact
-          Save exact version rather than semver range (e.g., `^1.0.0` -> `1.0.0`)
-      --save-catalog-name <CATALOG_NAME>
-          Save the new dependency to the specified catalog name. Example: `vite add vue --save-catalog-name vue3`
-      --save-catalog
-          Save the new dependency to the default catalog
-      --allow-build <NAMES>
-          A list of package names allowed to run postinstall
-      --filter <PATTERN>
-          Filter packages in monorepo (can be used multiple times)
-  -w, --workspace-root
-          Add to workspace root (ignore-workspace-root-check)
-      --workspace
-          Only add if package exists in workspace (pnpm-specific)
-  -g, --global
-          Install globally
-  -h, --help
-          Print help
+  -P, --save-prod                         Save to `dependencies` (default)
+  -D, --save-dev                          Save to `devDependencies`
+      --save-peer                         Save to `peerDependencies` and `devDependencies`
+  -O, --save-optional                     Save to `optionalDependencies`
+  -E, --save-exact                        Save exact version rather than semver range
+      --save-catalog-name <CATALOG_NAME>  Save the new dependency to the specified catalog name
+      --save-catalog                      Save the new dependency to the default catalog
+      --allow-build <NAMES>               A list of package names allowed to run postinstall
+      --filter <PATTERN>                  Filter packages in monorepo (can be used multiple times)
+  -w, --workspace-root                    Add to workspace root
+      --workspace                         Only add if package exists in workspace (pnpm-specific)
+  -g, --global                            Install globally
+  -h, --help                              Print help
 
-> vite remove -h # show remove help message
+> vp remove -h # show remove help message
 Remove packages from dependencies
 
-Usage: vite remove [OPTIONS] <PACKAGES>... [-- <PASS_THROUGH_ARGS>...]
+Usage: vp remove [OPTIONS] <PACKAGES>... [-- <PASS_THROUGH_ARGS>...]
 
 Arguments:
   <PACKAGES>...           Packages to remove
@@ -126,14 +113,14 @@ Options:
   -P, --save-prod         Only remove from `dependencies` (pnpm-specific)
       --filter <PATTERN>  Filter packages in monorepo (can be used multiple times)
   -w, --workspace-root    Remove from workspace root
-  -r, --recursive         Remove recursively from all workspace packages, including workspace root
+  -r, --recursive         Remove recursively from all workspace packages
   -g, --global            Remove global packages
   -h, --help              Print help
 
-> vite update -h # show update help message
+> vp update -h # show update help message
 Update packages to their latest versions
 
-Usage: vite update [OPTIONS] [PACKAGES]... [-- <PASS_THROUGH_ARGS>...]
+Usage: vp update [OPTIONS] [PACKAGES]... [-- <PASS_THROUGH_ARGS>...]
 
 Arguments:
   [PACKAGES]...           Packages to update (optional - updates all if omitted)
@@ -147,41 +134,41 @@ Options:
   -w, --workspace-root    Include workspace root
   -D, --dev               Update only devDependencies
   -P, --prod              Update only dependencies (production)
-  -i, --interactive       Interactive mode - show outdated packages and choose which to update
+  -i, --interactive       Interactive mode
       --no-optional       Don't update optionalDependencies
       --no-save           Update lockfile only, don't modify package.json
       --workspace         Only update if package exists in workspace (pnpm-specific)
   -h, --help              Print help
 
-> vite link -h # show link help message
+> vp link -h # show link help message
 Link packages for local development
 
-Usage: vite link [PACKAGE|DIR] [ARGS]...
+Usage: vp link [PACKAGE|DIR] [ARGS]...
 
 Arguments:
-  [PACKAGE|DIR]  Package name or directory to link If empty, registers current package globally
+  [PACKAGE|DIR]  Package name or directory to link
   [ARGS]...      Arguments to pass to package manager
 
 Options:
   -h, --help  Print help
 
-> vite unlink -h # show unlink help message
+> vp unlink -h # show unlink help message
 Unlink packages
 
-Usage: vite unlink [OPTIONS] [PACKAGE|DIR] [ARGS]...
+Usage: vp unlink [OPTIONS] [PACKAGE|DIR] [ARGS]...
 
 Arguments:
-  [PACKAGE|DIR]  Package name to unlink If empty, unlinks current package globally
+  [PACKAGE|DIR]  Package name to unlink
   [ARGS]...      Arguments to pass to package manager
 
 Options:
-  -r, --recursive  Unlink in every workspace package (pnpm/yarn@2+-specific)
+  -r, --recursive  Unlink in every workspace package
   -h, --help       Print help
 
-> vite dedupe -h # show dedupe help message
-Deduplicate dependencies by removing older versions
+> vp dedupe -h # show dedupe help message
+Deduplicate dependencies
 
-Usage: vite dedupe [OPTIONS] [-- <PASS_THROUGH_ARGS>...]
+Usage: vp dedupe [OPTIONS] [-- <PASS_THROUGH_ARGS>...]
 
 Arguments:
   [PASS_THROUGH_ARGS]...  Additional arguments to pass through to the package manager
@@ -190,33 +177,33 @@ Options:
       --check  Check if deduplication would make changes
   -h, --help   Print help
 
-> vite outdated -h # show outdated help message
+> vp outdated -h # show outdated help message
 Check for outdated packages
 
-Usage: vite outdated [OPTIONS] [PACKAGES]... [-- <PASS_THROUGH_ARGS>...]
+Usage: vp outdated [OPTIONS] [PACKAGES]... [-- <PASS_THROUGH_ARGS>...]
 
 Arguments:
-  [PACKAGES]...           Package name(s) to check (supports glob patterns in pnpm)
+  [PACKAGES]...           Package name(s) to check
   [PASS_THROUGH_ARGS]...  Additional arguments to pass through to the package manager
 
 Options:
       --long              Show extended information
       --format <FORMAT>   Output format: table (default), list, or json
   -r, --recursive         Check recursively across all workspaces
-      --filter <PATTERN>  Filter packages in monorepo (can be used multiple times)
+      --filter <PATTERN>  Filter packages in monorepo
   -w, --workspace-root    Include workspace root
-  -P, --prod              Only production and optional dependencies (pnpm-specific)
-  -D, --dev               Only dev dependencies (pnpm-specific)
-      --no-optional       Exclude optional dependencies (pnpm-specific)
-      --compatible        Only show compatible versions (pnpm-specific)
-      --sort-by <FIELD>   Sort results by field (pnpm-specific)
+  -P, --prod              Only production and optional dependencies
+  -D, --dev               Only dev dependencies
+      --no-optional       Exclude optional dependencies
+      --compatible        Only show compatible versions
+      --sort-by <FIELD>   Sort results by field
   -g, --global            Check globally installed packages
   -h, --help              Print help
 
-> vite why -h # show why help message
+> vp why -h # show why help message
 Show why a package is installed
 
-Usage: vite why [OPTIONS] <PACKAGES>... [-- <PASS_THROUGH_ARGS>...]
+Usage: vp why [OPTIONS] <PACKAGES>... [-- <PASS_THROUGH_ARGS>...]
 
 Arguments:
   <PACKAGES>...           Package(s) to check
@@ -224,24 +211,24 @@ Arguments:
 
 Options:
       --json                   Output in JSON format
-      --long                   Show extended information (pnpm-specific)
-      --parseable              Show parseable output (pnpm-specific)
+      --long                   Show extended information
+      --parseable              Show parseable output
   -r, --recursive              Check recursively across all workspaces
-      --filter <PATTERN>       Filter packages in monorepo (pnpm/npm-specific)
-  -w, --workspace-root         Check in workspace root (pnpm-specific)
-  -P, --prod                   Only production dependencies (pnpm-specific)
-  -D, --dev                    Only dev dependencies (pnpm-specific)
-      --depth <DEPTH>          Limit tree depth (pnpm-specific)
-      --no-optional            Exclude optional dependencies (pnpm-specific)
+      --filter <PATTERN>       Filter packages in monorepo
+  -w, --workspace-root         Check in workspace root
+  -P, --prod                   Only production dependencies
+  -D, --dev                    Only dev dependencies
+      --depth <DEPTH>          Limit tree depth
+      --no-optional            Exclude optional dependencies
   -g, --global                 Check globally installed packages
-      --exclude-peers          Exclude peer dependencies (pnpm/yarn@2+-specific)
-      --find-by <FINDER_NAME>  Use a finder function defined in .pnpmfile.cjs (pnpm-specific)
+      --exclude-peers          Exclude peer dependencies
+      --find-by <FINDER_NAME>  Use a finder function defined in .pnpmfile.cjs
   -h, --help                   Print help
 
-> vite pm -h # show pm help message
+> vp pm -h # show pm help message
 Forward a command to the package manager
 
-Usage: vite pm <COMMAND>
+Usage: vp pm <COMMAND>
 
 Commands:
   prune    Remove unnecessary packages

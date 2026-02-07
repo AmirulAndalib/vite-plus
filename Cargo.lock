@@ -6964,26 +6964,23 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "vite_error",
  "vite_install",
  "vite_path",
+ "vite_shared",
  "vite_str",
  "vite_task",
  "vite_workspace",
 ]
 
 [[package]]
-name = "vite-plus-global-cli"
+name = "vite-plus-global-cli-binding"
 version = "0.0.0"
 dependencies = [
- "clap",
  "fspy",
  "napi",
  "napi-build",
  "napi-derive",
- "tempfile",
- "tokio",
  "tracing",
  "tracing-subscriber",
  "vite_command",
@@ -7038,6 +7035,24 @@ source = "git+ssh://git@github.com/voidzero-dev/vite-task.git?rev=5ea9649f48940b
 dependencies = [
  "thiserror 2.0.17",
  "wax",
+]
+
+[[package]]
+name = "vite_global_cli"
+version = "0.0.0"
+dependencies = [
+ "clap",
+ "tempfile",
+ "thiserror 2.0.17",
+ "tokio",
+ "tracing",
+ "vite_error",
+ "vite_install",
+ "vite_js_runtime",
+ "vite_path",
+ "vite_shared",
+ "vite_str",
+ "vite_workspace",
 ]
 
 [[package]]
@@ -7138,6 +7153,7 @@ name = "vite_shared"
 version = "0.0.0"
 dependencies = [
  "directories",
+ "tracing-subscriber",
  "vite_path",
 ]
 

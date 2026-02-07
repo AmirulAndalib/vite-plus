@@ -1,8 +1,10 @@
 use std::process::ExitStatus;
 
-use vite_error::Error;
 use vite_install::{commands::dlx::DlxCommandOptions, package_manager::PackageManager};
 use vite_path::AbsolutePathBuf;
+
+use super::prepend_js_runtime_to_path_env;
+use crate::error::Error;
 
 /// Dlx command for executing packages without installing them as dependencies.
 ///
@@ -29,8 +31,10 @@ impl DlxCommand {
         args: Vec<String>,
     ) -> Result<ExitStatus, Error> {
         if args.is_empty() {
-            return Err(Error::InvalidArgument("dlx requires a package name".into()));
+            return Err(Error::Other("dlx requires a package name".into()));
         }
+
+        prepend_js_runtime_to_path_env(&self.cwd).await?;
 
         // First arg is the package spec, rest are command args
         let package_spec = &args[0];
@@ -47,7 +51,7 @@ impl DlxCommand {
             silent,
         };
 
-        package_manager.run_dlx_command(&dlx_command_options, &self.cwd).await
+        Ok(package_manager.run_dlx_command(&dlx_command_options, &self.cwd).await?)
     }
 }
 

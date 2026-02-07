@@ -67,7 +67,8 @@ jobs:
         env:
           RUSTFLAGS: '-D warnings --cfg tokio_unstable' # also update .cargo/config.toml
 
-      - run: cargo test -p vite_command -p vite_install -p vite_migration
+      # Test all crates/* packages. New crates are automatically included.
+      - run: cargo test $(for d in crates/*/; do echo -n "-p $(basename $d) "; done)
 
   lint:
     name: Lint
@@ -136,13 +137,13 @@ jobs:
 
       - name: Print help for built-in commands
         run: |
-          which vite
-          vite -h
-          vite run -h
-          vite lint -h
-          vite test -h
-          vite build -h
-          vite fmt -h
+          which vp
+          vp -h
+          vp run -h
+          vp lint -h
+          vp test -h
+          vp build -h
+          vp fmt -h
 
   cli-e2e-test:
     name: CLI E2E test
@@ -194,23 +195,25 @@ jobs:
       - name: Build CLI
         run: |
           pnpm bootstrap-cli:ci
-          which vite
-          vite --version
-          vite -h
+          which vp
+          vp --version
+          vp -h
+
+      - name: Check CLI JS execution on Windows rust binary
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          ls -al packages/global/bin
+          VITE_LOG=trace ./packages/global/bin/vp.exe -V
+          VITE_LOG=trace ./packages/global/bin/vp.exe pm cache dir
 
       - name: Run CLI fmt
-        run: vite fmt --check
+        run: vp fmt --check
 
       - name: Run CLI lint
-        run: vite run lint
+        run: vp run lint
 
       - name: Install Playwright browsers
         run: pnpx playwright install chromium
-
-      - name: Create vite.cmd shim file for Windows
-        if: ${{ matrix.os == 'windows-latest' }}
-        run: |
-          printf '@echo off\nnode "%%~dp0vite" %%*\n' > packages/global/bin/vite.cmd
 
       - name: Run CLI snapshot tests
         run: |
@@ -218,7 +221,7 @@ jobs:
           git diff --exit-code
 
   install-e2e-test:
-    name: vite install E2E test
+    name: Local CLI `vite install` E2E test
     needs:
       - download-previous-rolldown-binaries
     runs-on: ubuntu-latest
@@ -254,7 +257,7 @@ jobs:
       - name: Build CLI
         run: pnpm bootstrap-cli:ci
 
-      - name: Run local CLI vite install
+      - name: Run local CLI `vite install`
         run: |
           export PATH=$PWD/node_modules/.bin:$PATH
           vite -h
