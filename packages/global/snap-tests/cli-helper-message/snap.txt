@@ -3,18 +3,18 @@ Vite+/<semver>
 
 Usage: vp [COMMAND]
 
-Vite+ Commands:
+Core Commands:
+  create     Create a new project from a template
   dev        Run the development server
   build      Build for production
-  lint       Lint code
   test       Run tests
+  lint       Lint code
   fmt        Format code
-  lib        Build library
+  run        Run tasks
+  preview    Preview production build
+  env        Manage Node.js versions
   migrate    Migrate an existing project to Vite+<repeat>
   cache      Manage the task cache
-  new        Generate a new project
-  run        Run tasks
-  env        Manage Node.js versions
 
 Package Manager Commands:
   install, i                     Install all dependencies, or add packages if package names are provided

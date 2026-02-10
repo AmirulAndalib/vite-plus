@@ -878,7 +878,7 @@ Press Enter to accept (Y/n):
   The Unified Toolchain for the Web.
 
   Get started:
-    vp new          Create a new project
+    vp create          Create a new project
     vp env          Manage Node.js versions
     vp install      Install dependencies
     vp dev          Start dev server

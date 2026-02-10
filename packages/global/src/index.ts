@@ -10,8 +10,8 @@ if (args[0] === 'help' && args[1]) {
 
 const command = args[0];
 
-if (command === 'new') {
-  import('./new/bin.js');
+if (command === 'create') {
+  import('./create/bin.js');
 } else if (command === 'migrate') {
   import('./migration/bin.js');
 } else if (command === '--version' || command === '-V') {

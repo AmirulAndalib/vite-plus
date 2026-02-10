@@ -67,7 +67,7 @@ jobs:
           vp --version
           vp --help
           # test new command
-          vp new create-vite --no-interactive --no-agent -- hello --no-interactive -t vanilla
+          vp create vite --no-interactive --no-agent -- hello --no-interactive -t vanilla
           cd hello && vp run build
 
       - name: Set PATH
@@ -173,7 +173,7 @@ jobs:
               vp --version
 
               # FIXME: qemu: uncaught target signal 11 (Segmentation fault) - core dumped
-              # vp new create-vite --no-interactive --no-agent -- hello --no-interactive -t vanilla
+              # vp create vite --no-interactive --no-agent -- hello --no-interactive -t vanilla
               # cd hello && vp run build
             "
 
@@ -218,7 +218,7 @@ jobs:
           vp --help
           # $env:VITE_LOG = "trace"
           # test new command
-          vp new create-vite --no-interactive --no-agent -- hello --no-interactive -t vanilla
+          vp create vite --no-interactive --no-agent -- hello --no-interactive -t vanilla
           cd hello && vp run build
 
       - name: Verify bin setup on powershell
@@ -261,7 +261,7 @@ jobs:
           dir "%USERPROFILE%\.vite-plus\bin"
 
           REM test new command
-          vp new create-vite --no-interactive --no-agent -- hello-cmd --no-interactive -t vanilla
+          vp create vite --no-interactive --no-agent -- hello-cmd --no-interactive -t vanilla
           cd hello-cmd && vp run build
 
       - name: Verify bin setup on cmd
@@ -300,7 +300,7 @@ jobs:
           vp --version
           vp --help
           # test new command
-          vp new create-vite --no-interactive --no-agent -- hello-bash --no-interactive -t vanilla
+          vp create vite --no-interactive --no-agent -- hello-bash --no-interactive -t vanilla
           cd hello-bash && vp run build
 
       - name: Verify bin setup on bash

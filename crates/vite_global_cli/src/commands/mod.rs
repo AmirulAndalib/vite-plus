@@ -16,7 +16,7 @@
 //! - `pm`: Forward commands to the package manager
 //!
 //! Category B - JS Script Commands:
-//! - `new`: Project scaffolding
+//! - `create`: Project scaffolding
 //! - `migrate`: Migration command
 //! - `version`: Version display
 //!
@@ -132,8 +132,8 @@ pub mod update;
 pub mod why;
 
 // Category B: JS Script Commands
+pub mod create;
 pub mod migrate;
-pub mod new;
 pub mod version;
 
 // Category D: Environment Management

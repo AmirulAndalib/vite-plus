@@ -66,13 +66,13 @@ Vite+ automatically detects and wraps the underlying package manager such as pnp
 
 ### Scaffolding your first Vite+ project
 
-Use `vp new` to create a new project:
+Use `vp create` to create a new project:
 
 ```bash
-vp new
+vp create
 ```
 
-You can run `vp new` inside of a project to add new apps or libraries to your project.
+You can run `vp create` inside of a project to add new apps or libraries to your project.
 
 ### Migrating an existing project
 

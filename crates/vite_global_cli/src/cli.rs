@@ -515,7 +515,7 @@ pub enum Commands {
     // =========================================================================
     /// Create a new project from a template (delegates to JS)
     #[command(disable_help_flag = true)]
-    New {
+    Create {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
@@ -1524,7 +1524,7 @@ pub async fn run_command(cwd: AbsolutePathBuf, args: Args) -> Result<ExitStatus,
         Commands::Pm(pm_command) => commands::pm::execute_pm_subcommand(cwd, pm_command).await,
 
         // Category B: JS Script Commands
-        Commands::New { args } => commands::new::execute(cwd, &args).await,
+        Commands::Create { args } => commands::create::execute(cwd, &args).await,
 
         Commands::Migrate { args } => commands::migrate::execute(cwd, &args).await,
 
@@ -1590,18 +1590,18 @@ fn apply_custom_help(cmd: clap::Command) -> clap::Command {
     let version = env!("CARGO_PKG_VERSION");
 
     let after_help = format!(
-        "{bold_underline}Vite+ Commands:{reset}
+        "{bold_underline}Core Commands:{reset}
+  {bold}create{reset}     Create a new project from a template
   {bold}dev{reset}        Run the development server
   {bold}build{reset}      Build for production
-  {bold}lint{reset}       Lint code
   {bold}test{reset}       Run tests
+  {bold}lint{reset}       Lint code
   {bold}fmt{reset}        Format code
-  {bold}lib{reset}        Build library
+  {bold}run{reset}        Run tasks
+  {bold}preview{reset}    Preview production build
+  {bold}env{reset}        Manage Node.js versions
   {bold}migrate{reset}    Migrate an existing project to Vite+
   {bold}cache{reset}      Manage the task cache
-  {bold}new{reset}        Generate a new project
-  {bold}run{reset}        Run tasks
-  {bold}env{reset}        Manage Node.js versions
 
 {bold_underline}Package Manager Commands:{reset}
   {bold}install, i{reset}                     Install all dependencies, or add packages if package names are provided

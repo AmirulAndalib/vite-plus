@@ -106,14 +106,81 @@ export function discoverTemplate(
     }
   }
 
+  const expandedName = expandCreateShorthand(templateName);
   return {
-    command: templateName,
+    command: expandedName,
     args: [...templateArgs],
     envs,
     type: TemplateType.remote,
     parentDir,
     interactive,
   };
+}
+
+/**
+ * Expand shorthand template names to their full `create-*` package names.
+ *
+ * This follows the same convention as `npm create` / `pnpm create`:
+ * - `vite` → `create-vite`
+ * - `vite@latest` → `create-vite@latest`
+ * - `@tanstack/start` → `@tanstack/create-start`
+ * - `@tanstack/start@latest` → `@tanstack/create-start@latest`
+ *
+ * Skips expansion for:
+ * - Builtin templates (`vite:*`)
+ * - GitHub URLs
+ * - Local paths (`./`, `../`, `/`)
+ * - Names already starting with `create-` (or `@scope/create-`)
+ */
+export function expandCreateShorthand(templateName: string): string {
+  // Skip builtins (vite:monorepo, vite:application, etc.)
+  if (templateName.includes(':')) {
+    return templateName;
+  }
+
+  // Skip GitHub URLs
+  if (isGitHubUrl(templateName)) {
+    return templateName;
+  }
+
+  // Skip local paths
+  if (
+    templateName.startsWith('./') ||
+    templateName.startsWith('../') ||
+    templateName.startsWith('/')
+  ) {
+    return templateName;
+  }
+
+  // Scoped package: @scope/name[@version]
+  if (templateName.startsWith('@')) {
+    const slashIndex = templateName.indexOf('/');
+    if (slashIndex === -1) {
+      return templateName;
+    }
+    const scope = templateName.slice(0, slashIndex);
+    const rest = templateName.slice(slashIndex + 1);
+
+    // Split name and version: name@version
+    const atIndex = rest.indexOf('@');
+    const name = atIndex === -1 ? rest : rest.slice(0, atIndex);
+    const version = atIndex === -1 ? '' : rest.slice(atIndex);
+
+    if (name.startsWith('create-')) {
+      return templateName;
+    }
+    return `${scope}/create-${name}${version}`;
+  }
+
+  // Unscoped package: name[@version]
+  const atIndex = templateName.indexOf('@');
+  const name = atIndex === -1 ? templateName : templateName.slice(0, atIndex);
+  const version = atIndex === -1 ? '' : templateName.slice(atIndex);
+
+  if (name.startsWith('create-')) {
+    return templateName;
+  }
+  return `create-${name}${version}`;
 }
 
 // Infer the parent directory of the generated package based on the template name

@@ -41,14 +41,14 @@ import { BuiltinTemplate, TemplateType } from './templates/types.js';
 import { formatTargetDir } from './utils.js';
 
 const helpMessage = `\
-${headline(`Usage:`)} ${styleText('bold', `vp new [TEMPLATE] [OPTIONS] [-- TEMPLATE_OPTIONS]`)}
+${headline(`Usage:`)} ${styleText('bold', `vp create [TEMPLATE] [OPTIONS] [-- TEMPLATE_OPTIONS]`)}
 
 Use any builtin, local or remote template with Vite+.
 
 ${headline(`Arguments:`)}
-  TEMPLATE            Template name. Run \`vp new --list\` to see available templates.
+  TEMPLATE            Template name. Run \`vp create --list\` to see available templates.
                       - Default: vite:monorepo, vite:application, vite:library, vite:generator
-                      - Remote: create-vite, @tanstack/create-start, create-next-app,
+                      - Remote: vite, @tanstack/start, create-next-app,
                         create-nuxt, github:user/repo, https://github.com/user/template-repo, etc.
                       - Local: @company/generator-*, ./tools/create-ui-component
 
@@ -64,23 +64,26 @@ ${headline(`Template options:`)}
 
 ${headline(`Examples:`)}
   ${muted('# Interactive mode')}
-  ${accent(`vp new`)}
+  ${accent(`vp create`)}
 
-  ${muted('# Use existing templates')}
-  ${accent(`vp new create-vite`)}
-  ${accent(`vp new create-next-app`)}
-  ${accent(`vp new @tanstack/create-start`)}
-  ${accent(`vp new create-vite -- --template react-ts`)}
+  ${muted('# Use existing templates (shorthand expands to create-* packages)')}
+  ${accent(`vp create vite`)}
+  ${accent(`vp create @tanstack/start`)}
+  ${accent(`vp create vite -- --template react-ts`)}
+
+  ${muted('# Full package names also work')}
+  ${accent(`vp create create-vite`)}
+  ${accent(`vp create create-next-app`)}
 
   ${muted('# Create Vite+ monorepo, application, library, or generator scaffolds')}
-  ${accent(`vp new vite:monorepo`)}
-  ${accent(`vp new vite:application`)}
-  ${accent(`vp new vite:library`)}
-  ${accent(`vp new vite:generator`)}
+  ${accent(`vp create vite:monorepo`)}
+  ${accent(`vp create vite:application`)}
+  ${accent(`vp create vite:library`)}
+  ${accent(`vp create vite:generator`)}
 
   ${muted('# Use templates from GitHub (via degit)')}
-  ${accent(`vp new github:user/repo`)}
-  ${accent(`vp new https://github.com/user/template-repo`)}
+  ${accent(`vp create github:user/repo`)}
+  ${accent(`vp create https://github.com/user/template-repo`)}
 `;
 
 export interface Options {
@@ -153,13 +156,13 @@ async function main() {
     console.error(`
 A template name is required when running in non-interactive mode
 
-Usage: vp new [TEMPLATE] [OPTIONS] [-- TEMPLATE_OPTIONS]
+Usage: vp create [TEMPLATE] [OPTIONS] [-- TEMPLATE_OPTIONS]
 
-Example: 
+Example:
   ${muted('# Create a new application in non-interactive mode with a custom target directory')}
-  vp new vite:application --no-interactive --directory=apps/my-app
+  vp create vite:application --no-interactive --directory=apps/my-app
 
-Use \`vp new --list\` to list all available templates, or run \`vp new --help\` for more information.
+Use \`vp create --list\` to list all available templates, or run \`vp create --help\` for more information.
 `);
     process.exit(1);
   }
@@ -578,20 +581,24 @@ async function showAvailableTemplates() {
   log(`  vite:library             ${muted('Create a new library')}`);
   log(`  vite:generator           ${muted('Scaffold a new code generator')}`);
   log('');
-  log(headline('Popular Templates:'));
-  log(`  create-vite              ${muted('Official Vite templates')}`);
-  log(`  create-typescript-app    ${muted('TypeScript application')}`);
-  log(`  @tanstack/create-start   ${muted('TanStack applications')}`);
-  log(`  create-next-app          ${muted('Next.js application')}`);
-  log(`  create-nuxt              ${muted('Nuxt application')}`);
-  log(`  create-react-router      ${muted('React Router application')}`);
-  log(`  create-vue               ${muted('Vue application')}`);
+  log(headline('Popular Templates (shorthand):'));
+  log(`  vite                     ${muted('Official Vite templates (create-vite)')}`);
+  log(`  @tanstack/start          ${muted('TanStack applications (@tanstack/create-start)')}`);
+  log(`  next-app                 ${muted('Next.js application (create-next-app)')}`);
+  log(`  nuxt                     ${muted('Nuxt application (create-nuxt)')}`);
+  log(`  react-router             ${muted('React Router application (create-react-router)')}`);
+  log(`  vue                      ${muted('Vue application (create-vue)')}`);
   log('');
   log(headline(`Examples:`));
-  log(`  ${accent('vp new')} ${muted('# interactive mode')}`);
-  log(`  ${accent('vp new <template>')} ${muted('# use any template')}`);
-  log(`  ${accent('vp new <template> -- <options>')} ${muted('# pass options to the template')}\n`);
-  log(`✨ Tip: You can use any npm template or git repo with ${accent('vp new')}!\n`);
+  log(`  ${accent('vp create')} ${muted('# interactive mode')}`);
+  log(`  ${accent('vp create vite')} ${muted('# shorthand for create-vite')}`);
+  log(
+    `  ${accent('vp create @tanstack/start')} ${muted('# shorthand for @tanstack/create-start')}`,
+  );
+  log(
+    `  ${accent('vp create <template> -- <options>')} ${muted('# pass options to the template')}\n`,
+  );
+  log(`✨ Tip: You can use any npm template or git repo with ${accent('vp create')}!\n`);
 }
 
 main().catch((err) => {

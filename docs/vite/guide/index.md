@@ -49,7 +49,7 @@ vp env help               # Show all commands
 Create a Vite+ project:
 
 ```bash
-vp new
+vp create
 ```
 
 Follow the prompts to select your preferred framework and configuration.
