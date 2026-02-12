@@ -1,6 +1,6 @@
 //! Vite+ Global CLI
 //!
-//! A standalone Rust binary for the vite+ global CLI that can run without
+//! Standalone Rust binary for the vite+ global CLI that can run without
 //! pre-installed Node.js. Uses managed Node.js from `vite_js_runtime` for
 //! package manager commands and JS script execution.
 
