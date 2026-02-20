@@ -12,7 +12,7 @@ pub async fn execute(cwd: AbsolutePathBuf, args: &[String]) -> Result<ExitStatus
 
     // Execute the bundled JS script with the "create" command
     // The JS script handles all argument parsing, template discovery, and execution
-    executor.execute_cli_script("index.js", "create", args, &cwd).await
+    executor.execute_cli_script("global-entry.js", "create", args, &cwd).await
 }
 
 #[cfg(test)]

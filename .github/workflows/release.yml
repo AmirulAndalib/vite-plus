@@ -77,7 +77,6 @@ jobs:
       - name: Set binding version
         run: |
           pnpm exec tool replace-file-content packages/cli/binding/Cargo.toml 'version = "0.0.0"' 'version = "${{ env.VERSION }}"'
-          pnpm exec tool replace-file-content packages/global/binding/Cargo.toml 'version = "0.0.0"' 'version = "${{ env.VERSION }}"'
           pnpm exec tool replace-file-content crates/vite_global_cli/Cargo.toml 'version = "0.0.0"' 'version = "${{ env.VERSION }}"'
 
       - name: Configure Git for access to vite-task
@@ -93,13 +92,6 @@ jobs:
         with:
           name: vite-plus-native-${{ matrix.settings.target }}
           path: ./packages/cli/binding/*.node
-          if-no-files-found: error
-
-      - name: Upload Vite+ global binding artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: vite-plus-cli-native-${{ matrix.settings.target }}
-          path: ./packages/global/binding/*.node
           if-no-files-found: error
 
       - name: Upload Rust CLI binary artifact
@@ -130,14 +122,6 @@ jobs:
         with:
           name: cli
           path: ./packages/cli/dist
-          if-no-files-found: error
-
-      - name: Upload global dist
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: ${{ matrix.settings.target == 'x86_64-unknown-linux-gnu' }}
-        with:
-          name: global
-          path: ./packages/global/dist
           if-no-files-found: error
 
   Release:
@@ -194,19 +178,6 @@ jobs:
           target: x86_64-unknown-linux-gnu
           upload: 'false'
 
-      - name: Download global dist
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          path: packages/global/dist
-          pattern: global
-          merge-multiple: true
-
-      - name: Download global binding to artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          path: packages/global/artifacts
-          pattern: vite-plus-cli-native-*
-
       - name: Download Rust CLI binaries
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -242,7 +213,6 @@ jobs:
           sed -i 's/"version": "0.0.0"/"version": "${{ env.VERSION }}"/' packages/core/package.json
           sed -i 's/"version": "0.0.0"/"version": "${{ env.VERSION }}"/' packages/test/package.json
           sed -i 's/"version": "0.0.0"/"version": "${{ env.VERSION }}"/' packages/cli/package.json
-          sed -i 's/"version": "0.0.0"/"version": "${{ env.VERSION }}"/' packages/global/package.json
 
       - name: Build test
         run: pnpm --filter=@voidzero-dev/vite-plus-test build
@@ -254,14 +224,12 @@ jobs:
       - name: Publish native addons
         run: |
           node ./packages/cli/publish-native-addons.ts
-          node ./packages/global/publish-native-addons.ts
 
       - name: Publish
         run: |
           pnpm publish --filter=./packages/core --tag ${{ inputs.npm_tag }} --access public --no-git-checks
           pnpm publish --filter=./packages/test --tag ${{ inputs.npm_tag }} --access public --no-git-checks
           pnpm publish --filter=./packages/cli --tag ${{ inputs.npm_tag }} --access public --no-git-checks
-          pnpm publish --filter=./packages/global --tag ${{ inputs.npm_tag }} --access public --no-git-checks
 
       - name: Create release body
         run: |
@@ -282,7 +250,6 @@ jobs:
           - \`@voidzero-dev/vite-plus-core@${{ env.VERSION }}\`
           - \`@voidzero-dev/vite-plus-test@${{ env.VERSION }}\`
           - \`vite-plus@${{ env.VERSION }}\`
-          - \`vite-plus-cli@${{ env.VERSION }}\`
 
           ### Installation
 
@@ -324,7 +291,6 @@ jobs:
             • @voidzero-dev/vite-plus-core@${{ env.VERSION }}
             • @voidzero-dev/vite-plus-test@${{ env.VERSION }}
             • vite-plus@${{ env.VERSION }}
-            • vite-plus-cli@${{ env.VERSION }}
 
             **Install:**
             • macOS/Linux: `curl -fsSL https://staging.viteplus.dev/install.sh | bash`

@@ -1,0 +1,54 @@
+import assert from 'node:assert';
+import path from 'node:path';
+
+import type { WorkspaceInfo } from '../../global-types/index.js';
+import type { ExecutionResult } from '../command.js';
+import { setPackageName } from '../utils.js';
+import { executeGeneratorScaffold } from './generator.js';
+import { runRemoteTemplateCommand } from './remote.js';
+import { BuiltinTemplate, type BuiltinTemplateInfo } from './types.js';
+
+export async function executeBuiltinTemplate(
+  workspaceInfo: WorkspaceInfo,
+  templateInfo: BuiltinTemplateInfo,
+): Promise<ExecutionResult> {
+  assert(templateInfo.targetDir, 'targetDir is required');
+  assert(templateInfo.packageName, 'packageName is required');
+
+  if (templateInfo.command === BuiltinTemplate.generator) {
+    return await executeGeneratorScaffold(workspaceInfo, templateInfo);
+  }
+
+  if (templateInfo.command === BuiltinTemplate.application) {
+    templateInfo.command = 'create-vite@latest';
+    if (!templateInfo.interactive) {
+      templateInfo.args.push('--no-interactive');
+    }
+  } else if (templateInfo.command === BuiltinTemplate.library) {
+    templateInfo.command = 'create-tsdown@latest';
+    if (!templateInfo.interactive) {
+      // set default template for tsdown
+      if (!templateInfo.args.find((arg) => arg.startsWith('--template') || arg.startsWith('-t'))) {
+        templateInfo.args.push('--template', 'default');
+      }
+    }
+  }
+
+  templateInfo.args.unshift(templateInfo.targetDir);
+
+  // Handle remote/external templates with fspy monitoring
+  const result = await runRemoteTemplateCommand(
+    workspaceInfo,
+    workspaceInfo.rootDir,
+    templateInfo,
+    false,
+  );
+  const fullPath = path.join(workspaceInfo.rootDir, templateInfo.targetDir);
+  // set package name in the project directory
+  setPackageName(fullPath, templateInfo.packageName);
+
+  return {
+    ...result,
+    projectDir: templateInfo.targetDir,
+  };
+}

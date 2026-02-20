@@ -9,7 +9,7 @@ use crate::{error::Error, js_executor::JsExecutor};
 /// Execute the `--version` command by delegating to the bundled JavaScript implementation.
 pub async fn execute(cwd: AbsolutePathBuf) -> Result<ExitStatus, Error> {
     let mut executor = JsExecutor::new(None);
-    executor.execute_cli_script("index.js", "--version", &[], &cwd).await
+    executor.execute_cli_script("global-entry.js", "--version", &[], &cwd).await
 }
 
 #[cfg(test)]

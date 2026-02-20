@@ -6,6 +6,7 @@
     "vp": "./bin/vite"
   },
   "files": [
+    "AGENTS.md",
     "bin",
     "dist",
     "binding/*.node",
@@ -13,7 +14,12 @@
     "binding/index.d.cts",
     "binding/index.d.ts",
     "binding/index.js",
-    "dist/test"
+    "dist/test",
+    "install.sh",
+    "install.ps1",
+    "rules",
+    "templates",
+    "vp-binary"
   ],
   "type": "module",
   "sideEffects": false,
@@ -288,6 +294,7 @@
     "build-ts": "oxnode -C dev ./build.ts --skip-native",
     "build-native": "oxnode -C dev ./build.ts --skip-ts",
     "snap-test": "tool snap-test",
+    "snap-test-global": "SNAP_TEST_DIR=snap-tests-global SNAP_TEST_BIN_DIR=vp-binary tool snap-test",
     "publish-native": "node ./publish-native-addons.ts",
     "test": "vitest run"
   },
@@ -296,18 +303,33 @@
     "@voidzero-dev/vite-plus-core": "workspace:*",
     "@voidzero-dev/vite-plus-test": "workspace:*",
     "cac": "catalog:",
+    "cross-spawn": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
-    "oxlint-tsgolint": "catalog:"
+    "oxlint-tsgolint": "catalog:",
+    "picocolors": "catalog:"
   },
   "devDependencies": {
     "@napi-rs/cli": "catalog:",
+    "@nkzw/safe-word-list": "catalog:",
     "@oxc-node/core": "^0.0.32",
+    "@types/cross-spawn": "catalog:",
+    "@types/semver": "catalog:",
+    "@types/validate-npm-package-name": "catalog:",
+    "@voidzero-dev/vite-plus-prompts": "workspace:*",
     "@voidzero-dev/vite-plus-tools": "workspace:",
+    "detect-indent": "catalog:",
+    "detect-newline": "catalog:",
+    "glob": "catalog:",
+    "minimatch": "catalog:",
+    "mri": "catalog:",
     "rolldown": "workspace:*",
     "rolldown-plugin-dts": "catalog:",
+    "semver": "catalog:",
     "tsdown": "catalog:",
-    "vite": "workspace:*"
+    "validate-npm-package-name": "catalog:",
+    "vite": "workspace:*",
+    "yaml": "catalog:"
   },
   "napi": {
     "binaryName": "vite-plus",

@@ -1,8 +1,0 @@
-{
-  "name": "npm-monorepo",
-  "version": "1.0.0",
-  "workspaces": [
-    "packages/*"
-  ],
-  "packageManager": "npm@10.19.0"
-}

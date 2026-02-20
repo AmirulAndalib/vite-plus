@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["bench", "crates/*", "packages/cli/binding", "packages/global/binding"]
+members = ["bench", "crates/*", "packages/cli/binding"]
 
 [workspace.package]
 authors = ["Vite+ Authors"]

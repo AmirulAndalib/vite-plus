@@ -115,7 +115,7 @@ export async function snapTest() {
   // Clean up the temporary directory on exit
   process.on('exit', () => fs.rmSync(tempTmpDir, { recursive: true, force: true }));
 
-  const casesDir = path.resolve('snap-tests');
+  const casesDir = path.resolve(process.env.SNAP_TEST_DIR || 'snap-tests');
 
   const taskFunctions: (() => Promise<void>)[] = [];
   for (const caseName of fs.readdirSync(casesDir)) {
@@ -210,7 +210,9 @@ async function runTestCase(name: string, tempTmpDir: string, casesDir: string) {
   }
   env['PATH'] = [
     // Extend PATH to include the package's bin directory
-    path.resolve('bin'),
+    // SNAP_TEST_BIN_DIR overrides the default for cases like global CLI tests
+    // where vp should resolve to the Rust binary instead of the Node.js script
+    path.resolve(process.env.SNAP_TEST_BIN_DIR || 'bin'),
     ...env['PATH'].split(path.delimiter),
   ].join(path.delimiter);
 

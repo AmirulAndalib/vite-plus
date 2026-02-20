@@ -12,7 +12,7 @@ pub async fn execute(cwd: AbsolutePathBuf, args: &[String]) -> Result<ExitStatus
 
     // Execute the bundled JS script with the "migrate" command
     // The JS script handles all migration logic
-    executor.execute_cli_script("index.js", "migrate", args, &cwd).await
+    executor.execute_cli_script("global-entry.js", "migrate", args, &cwd).await
 }
 
 #[cfg(test)]

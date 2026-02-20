@@ -46,9 +46,9 @@ export function installGlobalCli() {
 
     // Use pnpm pack to create tarball
     // - Auto-resolves catalog: dependencies
-    // - Includes binary (already in packages/global/bin/ after copy-vp-binary)
+    // - Includes binary (already in packages/cli/vp-binary/ after copy-vp-binary)
     execSync(`pnpm pack --pack-destination "${tempDir}"`, {
-      cwd: path.join(repoRoot, 'packages/global'),
+      cwd: path.join(repoRoot, 'packages/cli'),
       stdio: 'inherit',
     });
 
@@ -72,7 +72,7 @@ export function installGlobalCli() {
     };
 
     // Run platform-specific install script (use absolute paths)
-    const installScriptDir = path.join(repoRoot, 'packages/global');
+    const installScriptDir = path.join(repoRoot, 'packages/cli');
     if (isWindows) {
       // Use pwsh (PowerShell Core) for better UTF-8 handling
       const ps1Path = path.join(installScriptDir, 'install.ps1');

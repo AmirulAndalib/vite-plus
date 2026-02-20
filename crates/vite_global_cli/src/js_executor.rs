@@ -55,8 +55,8 @@ impl JsExecutor {
         }
 
         // 3. Auto-detect from binary location
-        // JS scripts are at ../dist relative to bin/
-        // e.g., packages/global/bin/vp -> packages/global/dist/
+        // JS scripts are at ../dist relative to the binary directory
+        // e.g., packages/cli/vp-binary/vp -> packages/cli/dist/
         let exe_path = std::env::current_exe().map_err(|_| Error::JsScriptsDirNotFound)?;
         // Resolve symlinks to get the real binary path (Unix only)
         // Skip on Windows to avoid path resolution issues
@@ -111,7 +111,7 @@ impl JsExecutor {
     /// from `devEngines.runtime` in the CLI's package.json.
     fn get_cli_package_dir(&self) -> Result<AbsolutePathBuf, Error> {
         let scripts_dir = self.get_scripts_dir()?;
-        // scripts_dir is typically packages/global/dist, so parent is packages/global
+        // scripts_dir is typically packages/cli/dist, so parent is packages/cli
         scripts_dir
             .parent()
             .map(vite_path::AbsolutePath::to_absolute_path_buf)
@@ -222,7 +222,7 @@ impl JsExecutor {
 
         // Get the JS entry point (dist/index.js)
         let scripts_dir = self.get_scripts_dir()?;
-        let entry_point = scripts_dir.join("index.js");
+        let entry_point = scripts_dir.join("global-entry.js");
 
         tracing::debug!("Delegating to local CLI via JS entry point: {:?} {:?}", entry_point, args);
 

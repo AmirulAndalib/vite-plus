@@ -21,7 +21,7 @@ runs:
       id: cache-key
       shell: bash
       run: |
-        echo "key=napi-binding-v2-${{ inputs.target }}-${{ env.RELEASE_BUILD }}-${{ env.DEBUG }}-${{ env.VERSION }}-${{ env.NPM_TAG }}-${{ hashFiles('packages/tools/.upstream-versions.json', 'Cargo.lock', 'crates/**/*.rs', 'crates/*/Cargo.toml', 'packages/*/binding/**/*.rs', 'packages/*/binding/Cargo.toml', 'Cargo.toml', '.cargo/config.toml', 'packages/cli/package.json', 'packages/cli/build.ts', 'packages/global/package.json', 'packages/global/build.ts') }}" >> $GITHUB_OUTPUT
+        echo "key=napi-binding-v3-${{ inputs.target }}-${{ env.RELEASE_BUILD }}-${{ env.DEBUG }}-${{ env.VERSION }}-${{ env.NPM_TAG }}-${{ hashFiles('packages/tools/.upstream-versions.json', 'Cargo.lock', 'crates/**/*.rs', 'crates/*/Cargo.toml', 'packages/cli/binding/**/*.rs', 'packages/cli/binding/Cargo.toml', 'Cargo.toml', '.cargo/config.toml', 'packages/cli/package.json', 'packages/cli/build.ts') }}" >> $GITHUB_OUTPUT
 
     # Cache NAPI bindings and Rust CLI binary (the slow parts, especially on Windows)
     - name: Restore NAPI binding cache
@@ -34,9 +34,6 @@ runs:
           packages/cli/binding/index.d.ts
           packages/cli/binding/index.cjs
           packages/cli/binding/index.d.cts
-          packages/global/binding/*.node
-          packages/global/binding/index.js
-          packages/global/binding/index.d.ts
           target/${{ inputs.target }}/release/vp
           target/${{ inputs.target }}/release/vp.exe
         key: ${{ steps.cache-key.outputs.key }}
@@ -51,7 +48,6 @@ runs:
         pnpm --filter=@voidzero-dev/vite-plus-core build
         pnpm --filter=@voidzero-dev/vite-plus-test build
         pnpm --filter=vite-plus build-ts
-        pnpm --filter=vite-plus-cli build-ts
 
     # NAPI builds - only run on cache miss (slow, especially on Windows)
     # Must run before vite-plus/vite-plus-cli TypeScript builds which depend on the bindings
@@ -60,7 +56,6 @@ runs:
       if: steps.cache-restore.outputs.cache-hit != 'true' && inputs.target == 'x86_64-unknown-linux-gnu'
       run: |
         pnpm --filter=vite-plus build-native --target ${{ inputs.target }} --use-napi-cross
-        pnpm --filter=vite-plus-cli build-native --target ${{ inputs.target }} --use-napi-cross
       env:
         TARGET_CC: clang
         DEBUG: napi:*
@@ -70,7 +65,6 @@ runs:
       if: steps.cache-restore.outputs.cache-hit != 'true' && inputs.target == 'aarch64-unknown-linux-gnu'
       run: |
         pnpm --filter=vite-plus build-native --target ${{ inputs.target }} --use-napi-cross
-        pnpm --filter=vite-plus-cli build-native --target ${{ inputs.target }} --use-napi-cross
       env:
         TARGET_CC: clang
         TARGET_CFLAGS: '-D_BSD_SOURCE'
@@ -81,7 +75,6 @@ runs:
       if: steps.cache-restore.outputs.cache-hit != 'true' && !contains(inputs.target, 'linux')
       run: |
         pnpm --filter=vite-plus build-native --target ${{ inputs.target }}
-        pnpm --filter=vite-plus-cli build-native --target ${{ inputs.target }}
       env:
         DEBUG: napi:*
 
@@ -119,21 +112,19 @@ runs:
           packages/cli/binding/index.d.ts
           packages/cli/binding/index.cjs
           packages/cli/binding/index.d.cts
-          packages/global/binding/*.node
-          packages/global/binding/index.js
-          packages/global/binding/index.d.ts
           target/${{ inputs.target }}/release/vp
           target/${{ inputs.target }}/release/vp.exe
         key: ${{ steps.cache-key.outputs.key }}
 
-    # Copy Rust CLI binary to packages/global/bin/ (runs on both cache hit and miss)
+    # Copy Rust CLI binary to packages/cli/vp-binary/ (runs on both cache hit and miss)
     - name: Copy Rust CLI binary
       shell: bash
       run: |
+        mkdir -p packages/cli/vp-binary
         if [[ "${{ inputs.target }}" == *"windows"* ]]; then
-          cp target/${{ inputs.target }}/release/vp.exe packages/global/bin/vp.exe
+          cp target/${{ inputs.target }}/release/vp.exe packages/cli/vp-binary/vp.exe
         else
-          cp target/${{ inputs.target }}/release/vp packages/global/bin/vp
+          cp target/${{ inputs.target }}/release/vp packages/cli/vp-binary/vp
         fi
 
     # Build vite-plus TypeScript after native bindings are ready
@@ -141,7 +132,6 @@ runs:
       shell: bash
       run: |
         pnpm --filter=vite-plus build-ts
-        pnpm --filter=vite-plus-cli build-ts
 
     - name: Print output after build
       shell: bash

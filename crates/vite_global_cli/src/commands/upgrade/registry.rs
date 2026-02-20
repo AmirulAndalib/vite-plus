@@ -36,7 +36,7 @@ pub struct ResolvedVersion {
     pub platform_integrity: String,
 }
 
-const MAIN_PACKAGE_NAME: &str = "vite-plus-cli";
+const MAIN_PACKAGE_NAME: &str = "vite-plus";
 const PLATFORM_PACKAGE_SCOPE: &str = "@voidzero-dev";
 
 /// Resolve a version from the npm registry.
@@ -105,7 +105,7 @@ mod tests {
     fn test_package_name_construction() {
         let suffix = "darwin-arm64";
         let name = format!("{PLATFORM_PACKAGE_SCOPE}/{MAIN_PACKAGE_NAME}-{suffix}");
-        assert_eq!(name, "@voidzero-dev/vite-plus-cli-darwin-arm64");
+        assert_eq!(name, "@voidzero-dev/vite-plus-darwin-arm64");
     }
 
     #[test]

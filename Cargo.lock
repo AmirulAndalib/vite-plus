@@ -7043,6 +7043,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "clap",
+ "fspy",
  "napi",
  "napi-build",
  "napi-derive",
@@ -7053,33 +7054,17 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
- "vite_command",
- "vite_error",
- "vite_install",
- "vite_path",
- "vite_shared",
- "vite_str",
- "vite_task",
- "vite_workspace",
- "which",
-]
-
-[[package]]
-name = "vite-plus-global-cli-binding"
-version = "0.0.0"
-dependencies = [
- "fspy",
- "napi",
- "napi-build",
- "napi-derive",
- "tracing",
  "tracing-subscriber",
  "vite_command",
  "vite_error",
  "vite_install",
  "vite_migration",
  "vite_path",
+ "vite_shared",
+ "vite_str",
+ "vite_task",
  "vite_workspace",
+ "which",
 ]
 
 [[package]]

@@ -8,6 +8,9 @@
 pub extern crate rolldown_binding;
 
 mod cli;
+mod global_utils;
+mod migration;
+mod package_manager;
 
 use std::{collections::HashMap, ffi::OsStr, sync::Arc};
 
