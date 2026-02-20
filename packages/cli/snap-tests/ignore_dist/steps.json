@@ -3,8 +3,8 @@
     "VITE_DISABLE_AUTO_INSTALL": "1"
   },
   "commands": [
-    "vite run lint",
+    "vp run lint",
     "mkdir dist",
-    "vite run lint # new dist folder should not invalidate cache"
+    "vp run lint # new dist folder should not invalidate cache"
   ]
 }

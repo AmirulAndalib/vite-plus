@@ -1,4 +1,4 @@
-> vite run script1 # simple task
+> vp run script1 # simple task
 $ echo 'hello vite' ⊘ cache disabled: built-in command
 hello vite
 
@@ -16,7 +16,7 @@ Task Details:
       → Cache disabled for built-in command
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-> vite run script2 # nested task should work
+> vp run script2 # nested task should work
 $ echo 'hello vite' ⊘ cache disabled: built-in command
 hello vite
 

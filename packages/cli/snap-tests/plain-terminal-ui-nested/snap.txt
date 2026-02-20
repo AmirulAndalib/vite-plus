@@ -1,4 +1,4 @@
-> vite run hello
+> vp run hello
 $ vp lint ./src
 Found 0 warnings and 0 errors.
 Finished in <variable>ms on 1 file with <variable> rules using <variable> threads.
@@ -25,7 +25,7 @@ Task Details:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 > echo 'console.log(123)' > a.ts
-> vite run hello # report cache status from the inner runner
+> vp run hello # report cache status from the inner runner
 $ vp lint ./src ✓ cache hit, replaying
 Found 0 warnings and 0 errors.
 Finished in <variable>ms on 1 file with <variable> rules using <variable> threads.

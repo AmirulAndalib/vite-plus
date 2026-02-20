@@ -1,4 +1,4 @@
-> vite run install # install shortcut
+> vp run install # install shortcut
 $ vp install
 Packages: +<variable>
 +<repeat>
@@ -23,7 +23,7 @@ Task Details:
       → Cache miss: no previous cache entry found
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-> vite run install # install shortcut hit cache
+> vp run install # install shortcut hit cache
 $ vp install ✓ cache hit, replaying
 Packages: +<variable>
 +<repeat>

@@ -2,5 +2,5 @@
   "env": {
     "VITE_DISABLE_AUTO_INSTALL": "1"
   },
-  "commands": ["vite fmt --check # Test that vite fmt --check ignores the temp config file"]
+  "commands": ["vp fmt --check # Test that vp fmt --check ignores the temp config file"]
 }

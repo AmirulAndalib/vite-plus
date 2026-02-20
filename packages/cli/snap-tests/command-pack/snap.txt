@@ -1,4 +1,4 @@
-> vite pack -h # should print the help message
+> vp pack -h # should print the help message
 vite pack
 
 Usage:
@@ -49,7 +49,7 @@ Options:
   --exports                 Generate export-related metadata for package.json (experimental) 
   -h, --help                Display this message 
 
-> vite run pack # should build the library
+> vp run pack # should build the library
 $ vp pack src/index.ts
 ℹ entry: src/index.ts
 ℹ Build start
@@ -74,7 +74,7 @@ Task Details:
 > ls dist # should have the library
 index.mjs
 
-> vite run pack # should hit cache
+> vp run pack # should hit cache
 $ vp pack src/index.ts ✓ cache hit, replaying
 ℹ entry: src/index.ts
 ℹ Build start

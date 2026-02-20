@@ -1,4 +1,4 @@
-> VITE_MY_VAR=1 vite run build
+> VITE_MY_VAR=1 vp run build
 $ vp build
 vite v<semver>
 [2Ktransforming...✓ <variable> modules transformed.
@@ -23,7 +23,7 @@ Task Details:
       → Cache miss: no previous cache entry found
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-> VITE_MY_VAR=1 vite run build # should hit cache
+> VITE_MY_VAR=1 vp run build # should hit cache
 $ vp build ✓ cache hit, replaying
 vite v<semver>
 [2Ktransforming...✓ <variable> modules transformed.
@@ -48,7 +48,7 @@ Task Details:
       → Cache hit - output replayed - <variable>ms saved
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-> VITE_MY_VAR=2 vite run build # env changed, should miss cache
+> VITE_MY_VAR=2 vp run build # env changed, should miss cache
 $ vp build ✗ cache miss: envs changed, executing
 vite v<semver>
 [2Ktransforming...✓ <variable> modules transformed.

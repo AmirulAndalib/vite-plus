@@ -1,4 +1,4 @@
-> vite run dev # synthetic dev (vp dev) should have cache disabled even with cacheScripts
+> vp run dev # synthetic dev (vp dev) should have cache disabled even with cacheScripts
 $ vp dev --help ⊘ cache disabled: no cache config
 vite/<semver>
 

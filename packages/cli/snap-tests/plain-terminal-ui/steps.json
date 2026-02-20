@@ -4,20 +4,20 @@
     "VITE_DISABLE_AUTO_INSTALL": "1"
   },
   "commands": [
-    "FOO=1 vite run hello",
-    "FOO=1 vite run hello # hit cache",
+    "FOO=1 vp run hello",
+    "FOO=1 vp run hello # hit cache",
 
-    "FOO=2 vite run hello # env changed",
-    "FOO=2 BAR=1 vite run hello # env added",
-    "vite run hello # env removed",
+    "FOO=2 vp run hello # env changed",
+    "FOO=2 BAR=1 vp run hello # env added",
+    "vp run hello # env removed",
 
     "echo bar > input.txt",
-    "vite run hello # input changed",
+    "vp run hello # input changed",
 
     "# set passThroughEnvs via env var",
-    "VITE_TASK_PASS_THROUGH_ENVS=PTE vite run hello # passThroughEnvs changed",
+    "VITE_TASK_PASS_THROUGH_ENVS=PTE vp run hello # passThroughEnvs changed",
 
     "# set cwd via env var (keep passThroughEnvs from previous step)",
-    "VITE_TASK_PASS_THROUGH_ENVS=PTE VITE_TASK_CWD=subfolder vite run hello # cwd changed"
+    "VITE_TASK_PASS_THROUGH_ENVS=PTE VITE_TASK_CWD=subfolder vp run hello # cwd changed"
   ]
 }

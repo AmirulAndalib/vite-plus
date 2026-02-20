@@ -54,10 +54,12 @@ Snap tests verify CLI output. They are located in `packages/cli/snap-tests/` (lo
 # Run all snap tests (local + global)
 pnpm -F vite-plus snap-test
 
-# Run a specific test by name filter
-pnpm -F vite-plus snap-test <name-filter>
+# Run only local CLI snap tests
+pnpm -F vite-plus snap-test-local
+pnpm -F vite-plus snap-test-local <name-filter>
 
 # Run only global CLI snap tests
+pnpm -F vite-plus snap-test-global
 pnpm -F vite-plus snap-test-global <name-filter>
 ```
 

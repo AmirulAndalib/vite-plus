@@ -2,5 +2,5 @@
   "env": {
     "VITE_DISABLE_AUTO_INSTALL": "1"
   },
-  "commands": ["vite run hello"]
+  "commands": ["vp run hello"]
 }

@@ -4,22 +4,22 @@
   },
   "commands": [
     {
-      "command": "vite run hello#build # should build the library",
+      "command": "vp run hello#build # should build the library",
       "ignoreOutput": true
     },
     "ls packages/hello/dist # should have the library",
-    "vite run hello#build | grep 'cache hit' # should hit cache",
+    "vp run hello#build | grep 'cache hit' # should hit cache",
     {
-      "command": "vite run array-config#build # should build the library supports array config",
+      "command": "vp run array-config#build # should build the library supports array config",
       "ignoreOutput": true
     },
     "ls packages/array-config/dist # should have the library",
-    "vite run array-config#build | grep 'cache hit' # should hit cache",
+    "vp run array-config#build | grep 'cache hit' # should hit cache",
     {
-      "command": "vite run default-config#build # should build the library supports default config",
+      "command": "vp run default-config#build # should build the library supports default config",
       "ignoreOutput": true
     },
     "ls packages/default-config/dist # should have the library",
-    "vite run default-config#build | grep 'cache hit' # should hit cache"
+    "vp run default-config#build | grep 'cache hit' # should hit cache"
   ]
 }

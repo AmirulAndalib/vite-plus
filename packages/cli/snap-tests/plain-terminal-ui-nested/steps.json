@@ -4,8 +4,8 @@
     "VITE_DISABLE_AUTO_INSTALL": "1"
   },
   "commands": [
-    "vite run hello",
+    "vp run hello",
     "echo 'console.log(123)' > a.ts",
-    "vite run hello # report cache status from the inner runner"
+    "vp run hello # report cache status from the inner runner"
   ]
 }

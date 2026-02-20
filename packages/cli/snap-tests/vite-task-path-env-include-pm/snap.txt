@@ -1,4 +1,4 @@
-> vite install --no-frozen-lockfile
+> vp install --no-frozen-lockfile
 ➤ YN0050: The --frozen-lockfile option is deprecated; use --immutable and/or --immutable-cache instead
 
 ➤ YN0000: · Yarn <semver>
@@ -11,7 +11,7 @@
 ➤ YN0000: └ Completed
 ➤ YN0000: · Done with warnings in <variable>ms <variable>ms
 
-> vite run check-yarn-version
+> vp run check-yarn-version
 ➤ YN0000: · Yarn <semver>
 ➤ YN0000: ┌ Resolution step
 ➤ YN0000: └ Completed

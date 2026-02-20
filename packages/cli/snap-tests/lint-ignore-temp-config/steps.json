@@ -2,5 +2,5 @@
   "env": {
     "VITE_DISABLE_AUTO_INSTALL": "1"
   },
-  "commands": ["vite lint # Test that vite lint ignores the temp config file"]
+  "commands": ["vp lint # Test that vp lint ignores the temp config file"]
 }

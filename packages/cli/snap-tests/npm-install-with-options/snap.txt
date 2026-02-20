@@ -1,4 +1,4 @@
-> vite install --help # print help message
+> vp install --help # print help message
 Install a package
 
 Usage:
@@ -20,7 +20,7 @@ aliases: add, i, in, ins, inst, insta, instal, isnt, isnta, isntal, isntall
 
 Run "npm help install" for more info
 
-> vite run install # https://docs.npmjs.com/cli/v10/commands/npm-install
+> vp run install # https://docs.npmjs.com/cli/v10/commands/npm-install
 $ vp install --production --silent
 
 
@@ -41,7 +41,7 @@ Task Details:
 @oxlint
 tslib
 
-> vite run install # install again hit cache
+> vp run install # install again hit cache
 $ vp install --production --silent ✓ cache hit, replaying
 
 

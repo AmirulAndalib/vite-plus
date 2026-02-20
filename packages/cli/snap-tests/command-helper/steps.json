@@ -3,13 +3,13 @@
     "VITE_DISABLE_AUTO_INSTALL": "1"
   },
   "commands": [
-    "vite -h # help message",
-    "vite pack -h # pack help message",
-    "vite fmt -h # fmt help message",
-    "vite lint -h # lint help message",
-    "vite build -h # build help message",
-    "vite test -h # test help message",
-    "vite preview -h # preview help message",
-    "vite dev -h # dev help message"
+    "vp -h # help message",
+    "vp pack -h # pack help message",
+    "vp fmt -h # fmt help message",
+    "vp lint -h # lint help message",
+    "vp build -h # build help message",
+    "vp test -h # test help message",
+    "vp preview -h # preview help message",
+    "vp dev -h # dev help message"
   ]
 }

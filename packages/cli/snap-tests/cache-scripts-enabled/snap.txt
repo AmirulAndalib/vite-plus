@@ -1,4 +1,4 @@
-> vite run hello # first run should be cache miss
+> vp run hello # first run should be cache miss
 $ node hello.mjs
 hello from script
 
@@ -16,7 +16,7 @@ Task Details:
       → Cache miss: no previous cache entry found
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-> vite run hello # second run should be cache hit
+> vp run hello # second run should be cache hit
 $ node hello.mjs ✓ cache hit, replaying
 hello from script
 

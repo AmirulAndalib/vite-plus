@@ -1,4 +1,4 @@
-> vite run hello # first run - should show pnpm install output
+> vp run hello # first run - should show pnpm install output
 Already up to date
 
 Done in <variable>ms using pnpm v<semver>
@@ -20,7 +20,7 @@ Task Details:
       → Cache disabled for built-in command
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-> vite run hello # second run - no pnpm install output (cache hit, silent)
+> vp run hello # second run - no pnpm install output (cache hit, silent)
 $ echo hello ⊘ cache disabled: built-in command
 hello
 

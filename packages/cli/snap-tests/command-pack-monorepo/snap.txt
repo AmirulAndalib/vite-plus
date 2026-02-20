@@ -1,27 +1,27 @@
-> vite run hello#build # should build the library
+> vp run hello#build # should build the library
 > ls packages/hello/dist # should have the library
 index.cjs
 
-> vite run hello#build | grep 'cache hit' # should hit cache
+> vp run hello#build | grep 'cache hit' # should hit cache
 ~/packages/hello$ vp pack ✓ cache hit, replaying
 Statistics:   1 tasks • 1 cache hits • 0 cache misses 
 Performance:  100% cache hit rate, <variable>ms saved in total
 
-> vite run array-config#build # should build the library supports array config
+> vp run array-config#build # should build the library supports array config
 > ls packages/array-config/dist # should have the library
 index.d.mts
 index.mjs
 
-> vite run array-config#build | grep 'cache hit' # should hit cache
+> vp run array-config#build | grep 'cache hit' # should hit cache
 ~/packages/array-config$ vp pack ✓ cache hit, replaying
 Statistics:   1 tasks • 1 cache hits • 0 cache misses 
 Performance:  100% cache hit rate, <variable>ms saved in total
 
-> vite run default-config#build # should build the library supports default config
+> vp run default-config#build # should build the library supports default config
 > ls packages/default-config/dist # should have the library
 index.mjs
 
-> vite run default-config#build | grep 'cache hit' # should hit cache
+> vp run default-config#build | grep 'cache hit' # should hit cache
 ~/packages/default-config$ vp pack ✓ cache hit, replaying
 Statistics:   1 tasks • 1 cache hits • 0 cache misses 
 Performance:  100% cache hit rate, <variable>ms saved in total

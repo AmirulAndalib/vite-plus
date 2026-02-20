@@ -5,9 +5,9 @@
     "NODE_OPTIONS": "--no-deprecation"
   },
   "commands": [
-    "vite install --help # print help message",
-    "vite run install",
+    "vp install --help # print help message",
+    "vp run install",
     "ls node_modules",
-    "vite run install # install again hit cache"
+    "vp run install # install again hit cache"
   ]
 }

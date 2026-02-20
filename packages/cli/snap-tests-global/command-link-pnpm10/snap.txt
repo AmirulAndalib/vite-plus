@@ -82,10 +82,30 @@ importers:
         specifier: link:../test-lib-pnpm
         version: link:../test-lib-pnpm
 
-[2]> vp unlink ../test-lib-pnpm && vite unlink testnpm2 && cat package.json pnpm-lock.yaml # should unlink the package
+> vp unlink ../test-lib-pnpm && vp unlink testnpm2 && cat package.json pnpm-lock.yaml # should unlink the package
 Nothing to unlink
-error: unrecognized subcommand 'unlink'
+Nothing to unlink
+{
+  "name": "command-link-pnpm10",
+  "version": "1.0.0",
+  "dependencies": {
+    "testnpm2": "*"
+  },
+  "packageManager": "pnpm@<semver>"
+}
+lockfileVersion: '9.0'
 
-Usage: vite <COMMAND>
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
 
-For more information, try '--help'.
+overrides:
+  testnpm2: link:../test-lib-pnpm
+
+importers:
+
+  .:
+    dependencies:
+      testnpm2:
+        specifier: link:../test-lib-pnpm
+        version: link:../test-lib-pnpm

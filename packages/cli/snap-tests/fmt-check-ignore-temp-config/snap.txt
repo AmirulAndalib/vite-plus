@@ -1,4 +1,4 @@
-[1]> vite fmt --check # Test that vite fmt --check ignores the temp config file
+[1]> vp fmt --check # Test that vp fmt --check ignores the temp config file
 Checking formatting...
 src/valid.js (<variable>ms)
 

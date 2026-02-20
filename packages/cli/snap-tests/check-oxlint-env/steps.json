@@ -3,6 +3,6 @@
     "VITE_DISABLE_AUTO_INSTALL": "1"
   },
   "commands": [
-    "OXLINT_TSGOLINT_PATH=./invalid-path vite lint --type-aware # should error that ./invalid-path doesn't exist"
+    "OXLINT_TSGOLINT_PATH=./invalid-path vp lint --type-aware # should error that ./invalid-path doesn't exist"
   ]
 }

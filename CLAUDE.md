@@ -116,9 +116,11 @@ Snap tests are located in `packages/cli/snap-tests/` (local CLI) and `packages/c
 pnpm -F vite-plus snap-test
 
 # Run only local CLI snap tests
-pnpm -F vite-plus snap-test <name-filter>
+pnpm -F vite-plus snap-test-local
+pnpm -F vite-plus snap-test-local <name-filter>
 
 # Run only global CLI snap tests
+pnpm -F vite-plus snap-test-global
 pnpm -F vite-plus snap-test-global <name-filter>
 ```
 

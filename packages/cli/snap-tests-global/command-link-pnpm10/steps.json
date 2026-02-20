@@ -9,6 +9,6 @@
     "mkdir -p ../test-lib-pnpm && echo '{\"name\": \"testnpm2\", \"version\": \"1.0.0\"}' > ../test-lib-pnpm/package.json # create test library",
     "vp link ../test-lib-pnpm && cat package.json pnpm-lock.yaml # should link local directory",
     "vp ln ../test-lib-pnpm && cat package.json pnpm-lock.yaml # should work with ln alias",
-    "vp unlink ../test-lib-pnpm && vite unlink testnpm2 && cat package.json pnpm-lock.yaml # should unlink the package"
+    "vp unlink ../test-lib-pnpm && vp unlink testnpm2 && cat package.json pnpm-lock.yaml # should unlink the package"
   ]
 }

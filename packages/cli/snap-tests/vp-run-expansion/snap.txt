@@ -1,4 +1,4 @@
-> vite run hello
+> vp run hello
 $ node -p '40+2'
 42
 
@@ -16,7 +16,7 @@ Task Details:
       → Cache miss: no previous cache entry found
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-> vite run hello # should hit cache
+> vp run hello # should hit cache
 $ node -p '40+2' ✓ cache hit, replaying
 42
 

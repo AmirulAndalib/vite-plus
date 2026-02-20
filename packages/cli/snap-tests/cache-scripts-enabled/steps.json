@@ -3,7 +3,7 @@
     "VITE_DISABLE_AUTO_INSTALL": "1"
   },
   "commands": [
-    "vite run hello # first run should be cache miss",
-    "vite run hello # second run should be cache hit"
+    "vp run hello # first run should be cache miss",
+    "vp run hello # second run should be cache hit"
   ]
 }

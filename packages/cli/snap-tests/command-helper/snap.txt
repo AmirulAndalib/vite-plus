@@ -1,4 +1,4 @@
-> vite -h # help message
+> vp -h # help message
 Vite+/<semver>
 
 [1;4mUsage:[0m [1mvite[0m <COMMAND>
@@ -20,7 +20,7 @@ Vite+/<semver>
 Options:
   -h, --help  Print help
 
-> vite pack -h # pack help message
+> vp pack -h # pack help message
 vite pack
 
 Usage:
@@ -71,7 +71,7 @@ Options:
   --exports                 Generate export-related metadata for package.json (experimental) 
   -h, --help                Display this message 
 
-> vite fmt -h # fmt help message
+> vp fmt -h # fmt help message
 Usage: [-c=PATH] [PATH]...
 
 Mode Options:
@@ -109,7 +109,7 @@ Available options:
     -V, --version            Prints version information
 
 
-> vite lint -h # lint help message
+> vp lint -h # lint help message
 Usage: [-c=<./.oxlintrc.json>] [PATH]...
 
 Basic Configuration
@@ -210,7 +210,7 @@ Available options:
     -V, --version             Prints version information
 
 
-> vite build -h # build help message
+> vp build -h # build help message
 vite/<semver>
 
 Usage:
@@ -239,7 +239,7 @@ Options:
   -m, --mode <mode>             [string] set env mode 
   -h, --help                    Display this message 
 
-> vite test -h # test help message
+> vp test -h # test help message
 vitest/<semver>
  WARN: no options were found for your subcommands so we printed the whole output
 
@@ -331,7 +331,7 @@ Options:
   --experimental <features>                             Experimental features.. Use '--help --experimental' for more info. 
   -h, --help                                            Display this message 
 
-> vite preview -h # preview help message
+> vp preview -h # preview help message
 vite/<semver>
 
 Usage:
@@ -353,7 +353,7 @@ Options:
   -m, --mode <mode>        [string] set env mode 
   -h, --help               Display this message 
 
-> vite dev -h # dev help message
+> vp dev -h # dev help message
 vite/<semver>
 
 Usage:
