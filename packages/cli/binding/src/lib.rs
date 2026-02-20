@@ -8,7 +8,7 @@
 pub extern crate rolldown_binding;
 
 mod cli;
-mod global_utils;
+mod utils;
 mod migration;
 mod package_manager;
 

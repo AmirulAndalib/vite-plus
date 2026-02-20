@@ -365,9 +365,6 @@ importers:
       '@voidzero-dev/vite-plus-core':
         specifier: workspace:*
         version: link:../core
-      '@voidzero-dev/vite-plus-prompts':
-        specifier: workspace:*
-        version: link:../prompts
       '@voidzero-dev/vite-plus-test':
         specifier: workspace:*
         version: link:../test
@@ -408,6 +405,9 @@ importers:
       '@types/validate-npm-package-name':
         specifier: 'catalog:'
         version: 4.0.2
+      '@voidzero-dev/vite-plus-prompts':
+        specifier: workspace:*
+        version: link:../prompts
       '@voidzero-dev/vite-plus-tools':
         specifier: 'workspace:'
         version: link:../tools

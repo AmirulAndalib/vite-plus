@@ -293,7 +293,7 @@
     "build": "oxnode -C dev ./build.ts",
     "build-ts": "oxnode -C dev ./build.ts --skip-native",
     "build-native": "oxnode -C dev ./build.ts --skip-ts",
-    "snap-test": "tool snap-test",
+    "snap-test": "tool snap-test && pnpm snap-test-global",
     "snap-test-global": "SNAP_TEST_DIR=snap-tests-global SNAP_TEST_BIN_DIR=vp-binary tool snap-test",
     "publish-native": "node ./publish-native-addons.ts",
     "test": "vitest run"

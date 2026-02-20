@@ -4,11 +4,6 @@ import { styleText } from 'node:util';
 import * as prompts from '@voidzero-dev/vite-plus-prompts';
 import mri from 'mri';
 
-import {
-  rewriteMonorepo,
-  rewriteMonorepoProject,
-  rewriteStandaloneProject,
-} from '../migration/migrator.js';
 import { DependencyType, type WorkspaceInfo } from '../global-types/index.js';
 import {
   detectExistingAgentTargetPath,
@@ -21,12 +16,24 @@ import {
   runViteInstall,
   selectPackageManager,
 } from '../global-utils/prompts.js';
-import { accent, getVitePlusHeader, headline, muted, log, success } from '../global-utils/terminal.js';
+import {
+  accent,
+  getVitePlusHeader,
+  headline,
+  muted,
+  log,
+  success,
+} from '../global-utils/terminal.js';
 import {
   detectWorkspace,
   updatePackageJsonWithDeps,
   updateWorkspaceConfig,
 } from '../global-utils/workspace.js';
+import {
+  rewriteMonorepo,
+  rewriteMonorepoProject,
+  rewriteStandaloneProject,
+} from '../migration/migrator.js';
 import type { ExecutionResult } from './command.js';
 import { discoverTemplate, inferParentDir } from './discovery.js';
 import { cancelAndExit, checkProjectDirExists, promptPackageNameAndTargetDir } from './prompts.js';

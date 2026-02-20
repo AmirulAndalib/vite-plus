@@ -5,10 +5,10 @@ import path from 'node:path';
 import * as prompts from '@voidzero-dev/vite-plus-prompts';
 import spawn from 'cross-spawn';
 
-import { rewriteMonorepoProject } from '../../migration/migrator.js';
 import { PackageManager, type WorkspaceInfo } from '../../global-types/index.js';
 import { editJsonFile } from '../../global-utils/json.js';
 import { templatesDir } from '../../global-utils/path.js';
+import { rewriteMonorepoProject } from '../../migration/migrator.js';
 import type { ExecutionResult } from '../command.js';
 import { discoverTemplate } from '../discovery.js';
 import { copyDir, setPackageName } from '../utils.js';
