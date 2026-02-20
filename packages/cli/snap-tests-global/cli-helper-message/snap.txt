@@ -46,6 +46,15 @@ PACKAGE VERSIONS:
   vite-plus-cli: v<semver>
   vite-plus:     v<semver>
 
+BUNDLED WITH VITE-PLUS:
+  vite:          vite v<semver>
+  rolldown:      rolldown v<semver>
+  test:          vitest v<semver>
+  fmt:           oxfmt v<semver>
+  lint:          oxlint Not found
+  tsgolint:      oxlint-tsgolint v<semver>
+  pack:          tsdown v<semver>
+
 > vp install -h # show install help message
 Install all dependencies, or add packages if package names are provided
 

@@ -8,9 +8,14 @@
 pub extern crate rolldown_binding;
 
 mod cli;
-mod utils;
+// These modules export NAPI functions only called from JavaScript at runtime.
+// allow(dead_code) suppresses warnings in the test target which doesn't link NAPI.
+#[allow(dead_code)]
 mod migration;
+#[allow(dead_code)]
 mod package_manager;
+#[allow(dead_code)]
+mod utils;
 
 use std::{collections::HashMap, ffi::OsStr, sync::Arc};
 

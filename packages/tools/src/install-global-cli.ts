@@ -1,5 +1,11 @@
 import { execSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -78,6 +84,9 @@ export function installGlobalCli() {
       VITE_PLUS_HOME: installDir,
       VITE_PLUS_VERSION: 'local-dev',
       CI: 'true',
+      // Skip vp install in install.sh — we set up node_modules manually below
+      // because workspace:* deps resolve to 0.0.0 which don't exist on npm
+      VITE_PLUS_SKIP_DEPS_INSTALL: '1',
     };
 
     // Run platform-specific install script (use absolute paths)
@@ -96,13 +105,32 @@ export function installGlobalCli() {
         env,
       });
     }
-    // install.sh/install.ps1 already creates the correct symlinks and wrappers for vp
+
+    // Set up node_modules for local dev by rewriting workspace deps to file: protocol
+    // and running pnpm install. Production installs use `vp install` in install.sh directly.
+    const versionDir = path.join(installDir, 'local-dev');
+    setupLocalDevDeps(versionDir);
   } finally {
     // Cleanup temp dir only if we created it
     if (tempDir) {
       rmSync(tempDir, { recursive: true, force: true });
     }
   }
+}
+
+/**
+ * Set up dependencies for local dev by symlinking the monorepo's node_modules.
+ * This avoids issues with workspace:* protocol deps that don't exist on npm at 0.0.0.
+ * Production installs use `vp install` in install.sh which resolves real versions.
+ */
+function setupLocalDevDeps(versionDir: string) {
+  const nodeModulesLink = path.join(versionDir, 'node_modules');
+  // Use packages/cli/node_modules which has the cli's resolved deps (not root,
+  // since pnpm doesn't hoist workspace packages' deps to root node_modules)
+  const cliNodeModules = path.join(repoRoot, 'packages', 'cli', 'node_modules');
+
+  rmSync(nodeModulesLink, { recursive: true, force: true });
+  symlinkSync(cliNodeModules, nodeModulesLink, 'dir');
 }
 
 // Allow running directly via: npx tsx install-global-cli.ts <args>

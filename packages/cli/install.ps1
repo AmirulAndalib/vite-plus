@@ -401,18 +401,12 @@ function Main {
         }
     }
 
-    # Rewrite package.json to keep only global CLI runtime deps (cross-spawn, picocolors)
-    # The merged package has many local CLI deps that aren't needed for the global install
+    # Strip devDependencies and optionalDependencies from package.json
+    # Keep production dependencies so the global install has the full vite-plus runtime
     $pkgFile = Join-Path $VersionDir "package.json"
     $pkg = Get-Content $pkgFile -Raw | ConvertFrom-Json
     $pkg.PSObject.Properties.Remove("devDependencies")
     $pkg.PSObject.Properties.Remove("optionalDependencies")
-    $globalDeps = [PSCustomObject]@{ "cross-spawn" = "*"; "picocolors" = "*" }
-    if ($pkg.PSObject.Properties["dependencies"]) {
-        $pkg.dependencies = $globalDeps
-    } else {
-        $pkg | Add-Member -NotePropertyName "dependencies" -NotePropertyValue $globalDeps
-    }
     $pkg | ConvertTo-Json -Depth 10 | Set-Content $pkgFile
 
     # Remove stale lockfile and node_modules to avoid frozen-lockfile conflicts
@@ -420,13 +414,16 @@ function Main {
     Remove-Item -Path "$VersionDir\pnpm-lock.yaml" -Force -ErrorAction SilentlyContinue
     Remove-Item -Path "$VersionDir\node_modules" -Recurse -Force -ErrorAction SilentlyContinue
 
-    # Install production dependencies
-    Push-Location $VersionDir
-    try {
-        $env:CI = "true"
-        & "$BinDir\vp.exe" install --silent
-    } finally {
-        Pop-Location
+    # Install production dependencies (skip if VITE_PLUS_SKIP_DEPS_INSTALL is set,
+    # e.g. during local dev where install-global-cli.ts handles deps separately)
+    if (-not $env:VITE_PLUS_SKIP_DEPS_INSTALL) {
+        Push-Location $VersionDir
+        try {
+            $env:CI = "true"
+            & "$BinDir\vp.exe" install --silent
+        } finally {
+            Pop-Location
+        }
     }
 
     # Create/update current junction (symlink)

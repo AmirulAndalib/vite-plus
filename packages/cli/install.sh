@@ -625,21 +625,11 @@ main() {
     rm -rf "$temp_dir"
   fi
 
-  # Rewrite package.json to keep only global CLI runtime deps (cross-spawn, picocolors)
-  # The merged package has many local CLI deps that aren't needed for the global install
+  # Strip devDependencies and optionalDependencies from package.json
+  # Keep production dependencies so the global install has the full vite-plus runtime
   local pkg_file="$VERSION_DIR/package.json"
   awk '
     /"(devDependencies|optionalDependencies)"[[:space:]]*:[[:space:]]*\{/ {
-      skip = 1
-      depth = 1
-      next
-    }
-    /"dependencies"[[:space:]]*:[[:space:]]*\{/ {
-      # Replace dependencies with only the global CLI runtime deps
-      print "  \"dependencies\": {"
-      print "    \"cross-spawn\": \"*\","
-      print "    \"picocolors\": \"*\""
-      print "  },"
       skip = 1
       depth = 1
       next
@@ -661,8 +651,11 @@ main() {
   rm -f "$VERSION_DIR/pnpm-lock.yaml"
   rm -rf "$VERSION_DIR/node_modules"
 
-  # Install production dependencies
-  (cd "$VERSION_DIR" && CI=true "$BIN_DIR/vp" install --silent)
+  # Install production dependencies (skip if VITE_PLUS_SKIP_DEPS_INSTALL is set,
+  # e.g. during local dev where install-global-cli.ts handles deps separately)
+  if [ -z "${VITE_PLUS_SKIP_DEPS_INSTALL:-}" ]; then
+    (cd "$VERSION_DIR" && CI=true "$BIN_DIR/vp" install --silent)
+  fi
 
   # Create/update current symlink (use relative path for portability)
   ln -sfn "$VITE_PLUS_VERSION" "$CURRENT_LINK"

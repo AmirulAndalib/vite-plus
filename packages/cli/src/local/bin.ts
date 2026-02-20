@@ -11,6 +11,7 @@ import {
   hasVitePlusDependency,
   readNearestPackageJson,
 } from '../global-utils/package.js';
+import { pkgRoot } from '../global-utils/path.js';
 import { cancelAndExit, defaultInteractive, runViteInstall } from '../global-utils/prompts.js';
 import type { PackageDependencies } from '../global-utils/types.js';
 
@@ -25,6 +26,14 @@ if (!localCliMetadata) {
     startPrompts = true;
     await runViteInstall(cwd, interactive);
     localCliMetadata = detectPackageMetadata(cwd, VITE_PLUS_NAME);
+  }
+}
+
+if (!localCliMetadata) {
+  // Try to use vite-plus from the global installation's node_modules
+  const globalCliMetadata = detectPackageMetadata(pkgRoot, VITE_PLUS_NAME);
+  if (globalCliMetadata) {
+    localCliMetadata = globalCliMetadata;
   }
 }
 
