@@ -16,6 +16,7 @@
  * Native binding is built first because TypeScript may depend on generated binding types.
  */
 
+import { execSync } from 'node:child_process';
 import { existsSync, globSync, readdirSync, statSync } from 'node:fs';
 import { copyFile, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -55,7 +56,7 @@ const napiArgs = process.argv
 
 if (!skipTs) {
   await buildCli();
-  await buildGlobalModules();
+  buildGlobalModules();
 }
 // Build native first - TypeScript may depend on the generated binding types
 if (!skipNative) {
@@ -162,7 +163,6 @@ async function buildCli() {
         // Global CLI modules — bundled by rolldown instead of tsc
         'src/create/**',
         'src/migration/**',
-        'src/local/**',
         'src/version.ts',
         'src/types/**',
       ],
@@ -179,8 +179,7 @@ async function buildCli() {
   }
 }
 
-async function buildGlobalModules() {
-  const { execSync } = await import('node:child_process');
+function buildGlobalModules() {
   execSync('npx rolldown -c rolldown.config.ts', {
     cwd: projectDir,
     stdio: 'inherit',
