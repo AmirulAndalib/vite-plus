@@ -687,7 +687,7 @@ main() {
   echo "  The Unified Toolchain for the Web."
   echo ""
   echo -e "  ${BOLD}Get started:${NC}"
-  echo -e "    ${BRIGHT_BLUE}vp create${NC}          Create a new project"
+  echo -e "    ${BRIGHT_BLUE}vp create${NC}       Create a new project"
   echo -e "    ${BRIGHT_BLUE}vp env${NC}          Manage Node.js versions"
   echo -e "    ${BRIGHT_BLUE}vp install${NC}      Install dependencies"
   echo -e "    ${BRIGHT_BLUE}vp dev${NC}          Start dev server"

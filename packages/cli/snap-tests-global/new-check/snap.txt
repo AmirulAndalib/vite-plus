@@ -45,9 +45,6 @@ EXAMPLES:
   vp create github:user/repo
   vp create https://github.com/user/template-repo
 
-(node:21624) [DEP0151] DeprecationWarning: No "main" or "exports" field defined in the package.json for <vite-plus-home>/local-dev/node_modules/@nkzw/safe-word-list/ resolving the main entry point "index.js", imported from <vite-plus-home>/local-dev/dist/create/random-name.js.
-Default "index" lookups for the main are deprecated for ES modules.
-(Use `node --trace-deprecation ...` to show where the warning was created)
 
 > vp create --list # list templates
 VITE+ - The Unified Toolchain for the Web
@@ -74,9 +71,6 @@ EXAMPLES:
 
 ✨ Tip: You can use any npm template or git repo with vp create!
 
-(node:21663) [DEP0151] DeprecationWarning: No "main" or "exports" field defined in the package.json for <vite-plus-home>/local-dev/node_modules/@nkzw/safe-word-list/ resolving the main entry point "index.js", imported from <vite-plus-home>/local-dev/dist/create/random-name.js.
-Default "index" lookups for the main are deprecated for ES modules.
-(Use `node --trace-deprecation ...` to show where the warning was created)
 
 [1]> vp create --no-interactive # run in non-interactive mode without template name will show error
 
