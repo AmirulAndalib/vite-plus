@@ -285,6 +285,7 @@ function Main {
     $VersionDir = "$InstallDir\$ViteVersion"
     $BinDir = "$VersionDir\bin"
     $DistDir = "$VersionDir\dist"
+    $BindingDir = "$VersionDir\binding"
     $CurrentLink = "$InstallDir\current"
 
     $binaryName = "vp.exe"
@@ -292,6 +293,7 @@ function Main {
     # Create directories
     New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
     New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
+    New-Item -ItemType Directory -Force -Path $BindingDir | Out-Null
 
     # Download and extract native binary and .node files from platform package
     # Also copy JS bundle and assets
@@ -315,14 +317,14 @@ function Main {
             Write-Error-Exit "VITE_PLUS_LOCAL_BINARY must be set when using VITE_PLUS_LOCAL_TGZ"
         }
 
-        # Copy .node files if present
-        $nodeFilesPath = Join-Path $tempExtract "package" "dist"
+        # Copy .node files if present (NAPI bindings go to binding/ alongside index.cjs loader)
+        $nodeFilesPath = Join-Path $tempExtract "package" "binding"
         Get-ChildItem -Path $nodeFilesPath -Filter "*.node" -ErrorAction SilentlyContinue | ForEach-Object {
-            $destFile = Join-Path $DistDir $_.Name
+            $destFile = Join-Path $BindingDir $_.Name
             if (Test-Path $destFile) {
                 Remove-Item -Path $destFile -Force
             }
-            Copy-Item -Path $_.FullName -Destination $DistDir -Force
+            Copy-Item -Path $_.FullName -Destination $BindingDir -Force
         }
 
         # Copy JS assets
@@ -358,14 +360,14 @@ function Main {
                 Copy-Item -Path $binarySource -Destination $BinDir -Force
             }
 
-            # Copy .node files to DistDir (delete existing first to avoid system cache issues)
+            # Copy .node files to BindingDir (delete existing first to avoid system cache issues)
             $nodeFilesPath = Join-Path $platformTempExtract "package"
             Get-ChildItem -Path $nodeFilesPath -Filter "*.node" -ErrorAction SilentlyContinue | ForEach-Object {
-                $destFile = Join-Path $DistDir $_.Name
+                $destFile = Join-Path $BindingDir $_.Name
                 if (Test-Path $destFile) {
                     Remove-Item -Path $destFile -Force
                 }
-                Copy-Item -Path $_.FullName -Destination $DistDir -Force
+                Copy-Item -Path $_.FullName -Destination $BindingDir -Force
             }
 
             Remove-Item -Recurse -Force $platformTempExtract

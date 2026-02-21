@@ -539,6 +539,7 @@ main() {
   VERSION_DIR="$INSTALL_DIR/$VITE_PLUS_VERSION"
   BIN_DIR="$VERSION_DIR/bin"
   DIST_DIR="$VERSION_DIR/dist"
+  BINDING_DIR="$VERSION_DIR/binding"
   CURRENT_LINK="$INSTALL_DIR/current"
 
   local binary_name="vp"
@@ -547,7 +548,7 @@ main() {
   fi
 
   # Create directories
-  mkdir -p "$BIN_DIR" "$DIST_DIR"
+  mkdir -p "$BIN_DIR" "$DIST_DIR" "$BINDING_DIR"
 
   # Download and extract native binary and .node files from platform package
   # Also copy JS bundle and assets
@@ -570,11 +571,11 @@ main() {
     fi
     chmod +x "$BIN_DIR/$binary_name"
 
-    # Copy .node files if present
-    for node_file in "$temp_dir"/dist/*.node; do
+    # Copy .node files if present (NAPI bindings go to binding/ alongside index.cjs loader)
+    for node_file in "$temp_dir"/binding/*.node; do
       if [ -f "$node_file" ]; then
-        rm -f "$DIST_DIR/$(basename "$node_file")"
-        cp "$node_file" "$DIST_DIR/"
+        rm -f "$BINDING_DIR/$(basename "$node_file")"
+        cp "$node_file" "$BINDING_DIR/"
       fi
     done
 
@@ -602,10 +603,10 @@ main() {
     cp "$platform_temp_dir/$binary_name" "$BIN_DIR/"
     chmod +x "$BIN_DIR/$binary_name"
 
-    # Copy .node files to DIST_DIR (delete existing first to avoid system cache issues)
+    # Copy .node files to BINDING_DIR (delete existing first to avoid system cache issues)
     for node_file in "$platform_temp_dir"/*.node; do
-      rm -f "$DIST_DIR/$(basename "$node_file")"
-      cp "$node_file" "$DIST_DIR/"
+      rm -f "$BINDING_DIR/$(basename "$node_file")"
+      cp "$node_file" "$BINDING_DIR/"
     done
     rm -rf "$platform_temp_dir"
 

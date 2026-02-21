@@ -34,19 +34,19 @@ const MAIN_PACKAGE_ENTRIES: &[&str] =
 ///
 /// From the platform tarball, extracts:
 /// - The `vp` binary → `{version_dir}/bin/vp`
-/// - Any `.node` files → `{version_dir}/dist/`
+/// - Any `.node` files → `{version_dir}/binding/`
 pub async fn extract_platform_package(
     tgz_data: &[u8],
     version_dir: &AbsolutePath,
 ) -> Result<(), Error> {
     let bin_dir = version_dir.join("bin");
-    let dist_dir = version_dir.join("dist");
+    let binding_dir = version_dir.join("binding");
     tokio::fs::create_dir_all(&bin_dir).await?;
-    tokio::fs::create_dir_all(&dist_dir).await?;
+    tokio::fs::create_dir_all(&binding_dir).await?;
 
     let data = tgz_data.to_vec();
     let bin_dir_clone = bin_dir.clone();
-    let dist_dir_clone = dist_dir.clone();
+    let binding_dir_clone = binding_dir.clone();
 
     tokio::task::spawn_blocking(move || {
         let cursor = Cursor::new(data);
@@ -81,8 +81,8 @@ pub async fn extract_platform_package(
                     std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o755))?;
                 }
             } else if file_name.ends_with(".node") {
-                // .node NAPI files go to dist/
-                let target = dist_dir_clone.join(file_name);
+                // .node NAPI files go to binding/ (alongside index.cjs loader)
+                let target = binding_dir_clone.join(file_name);
                 let mut buf = Vec::new();
                 entry.read_to_end(&mut buf)?;
                 std::fs::write(&target, &buf)?;
