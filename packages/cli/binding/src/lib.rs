@@ -30,13 +30,14 @@ use crate::cli::{
 
 /// Guard must be kept alive for the duration of the process when using chrome-json output.
 /// Stored in a OnceLock so it's never dropped until process exit.
-static TRACING_GUARD: std::sync::OnceLock<Option<Box<dyn std::any::Any + Send>>> =
+/// Wrapped in Mutex because `Box<dyn Any + Send>` is not Sync, but OnceLock requires Sync for statics.
+static TRACING_GUARD: std::sync::OnceLock<std::sync::Mutex<Option<Box<dyn std::any::Any + Send>>>> =
     std::sync::OnceLock::new();
 
 /// Module initialization - sets up tracing for debugging
 #[napi_derive::module_init]
 pub fn init() {
-    TRACING_GUARD.get_or_init(crate::cli::init_tracing);
+    TRACING_GUARD.get_or_init(|| std::sync::Mutex::new(crate::cli::init_tracing()));
 }
 
 /// Configuration options passed from JavaScript to Rust.
