@@ -4,8 +4,9 @@
 //! - `VITE_LOG`: Controls log filtering (e.g., `"debug"`, `"vite_task=trace"`)
 //! - `VITE_LOG_OUTPUT`: Output format — `"chrome-json"` for Chrome DevTools timeline,
 //!   `"readable"` for pretty-printed output, or default stdout.
+//! - `VITE_LOG_OUTPUT_DIR`: Directory for chrome-json trace files (default: cwd).
 
-use std::{any::Any, sync::atomic::AtomicBool};
+use std::{any::Any, path::PathBuf, sync::atomic::AtomicBool};
 
 use tracing_chrome::ChromeLayerBuilder;
 use tracing_subscriber::{
@@ -48,10 +49,21 @@ pub fn init_tracing() -> Option<Box<dyn Any + Send>> {
 
     match output_mode.as_str() {
         "chrome-json" => {
-            let (chrome_layer, guard) = ChromeLayerBuilder::new()
+            let mut builder = ChromeLayerBuilder::new()
                 .trace_style(tracing_chrome::TraceStyle::Async)
-                .include_args(true)
-                .build();
+                .include_args(true);
+            // Write trace files to VITE_LOG_OUTPUT_DIR if set, to avoid
+            // polluting the project directory (formatters may pick them up).
+            if let Ok(dir) = std::env::var(env_vars::VITE_LOG_OUTPUT_DIR) {
+                let dir = PathBuf::from(dir);
+                let _ = std::fs::create_dir_all(&dir);
+                let ts = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_micros())
+                    .unwrap_or(0);
+                builder = builder.file(dir.join(format!("trace-{ts}.json")));
+            }
+            let (chrome_layer, guard) = builder.build();
             tracing_subscriber::registry().with(targets).with(chrome_layer).init();
             Some(Box::new(guard))
         }

@@ -273,11 +273,11 @@ vite-task uses Unix shared memory (`/dev/shm`) for parent-child process communic
 
 ## Known Issues
 
-### Windows: Trace files break formatter
+### Trace files break formatter (fixed)
 
-When `VITE_LOG_OUTPUT=chrome-json` is set, trace files (`trace-*.json`) are written to the project working directory. On Windows, `vp fmt` picks up these files and fails with "Unterminated string constant" because the trace files contain very long PATH strings.
+When `VITE_LOG_OUTPUT=chrome-json` is set, trace files (`trace-*.json`) were written to the project working directory. Formatters (oxfmt/prettier) pick up these files and fail with "Unterminated string constant" because trace files may contain truncated JSON (especially on Windows where PATH strings are very long).
 
-**Recommendation**: Add `trace-*.json` to formatter ignore patterns, or write trace files to a dedicated directory outside the workspace.
+**Fix**: Set `VITE_LOG_OUTPUT_DIR` to write trace files to a dedicated directory outside the workspace.
 
 ### NAPI trace files empty for some projects
 
