@@ -40,6 +40,18 @@ pub fn init() {
     TRACING_GUARD.get_or_init(|| std::sync::Mutex::new(crate::cli::init_tracing()));
 }
 
+/// Flush and drop the tracing guard. Must be called before process.exit()
+/// because Rust statics in OnceLock are never dropped, and the ChromeLayer
+/// FlushGuard only writes trace data to disk when dropped.
+#[napi]
+pub fn shutdown_tracing() {
+    if let Some(mutex) = TRACING_GUARD.get() {
+        if let Ok(mut guard) = mutex.lock() {
+            drop(guard.take());
+        }
+    }
+}
+
 /// Configuration options passed from JavaScript to Rust.
 #[napi(object, object_to_js = false)]
 pub struct CliOptions {

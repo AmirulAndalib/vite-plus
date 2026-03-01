@@ -12,7 +12,7 @@
 
 const jsStartTime = performance.now();
 
-import { run } from '../binding/index.js';
+import { run, shutdownTracing } from '../binding/index.js';
 import { doc } from './resolve-doc.js';
 import { fmt } from './resolve-fmt.js';
 import { lint } from './resolve-lint.js';
@@ -63,10 +63,12 @@ if (command === 'create') {
     args: process.argv.slice(2),
   })
     .then((exitCode) => {
+      shutdownTracing();
       process.exit(exitCode);
     })
     .catch((err) => {
       console.error('[Vite+] run error:', err);
+      shutdownTracing();
       process.exit(1);
     });
 }
