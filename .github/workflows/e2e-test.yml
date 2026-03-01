@@ -287,7 +287,37 @@ jobs:
 
       - name: Run vite-plus commands in ${{ matrix.project.name }}
         working-directory: ${{ runner.temp }}/vite-plus-ecosystem-ci/${{ matrix.project.name }}${{ matrix.project.directory && format('/{0}', matrix.project.directory) || '' }}
+        env:
+          VITE_LOG: debug
+          VITE_LOG_OUTPUT: chrome-json
         run: ${{ matrix.project.command }}
+
+      - name: Run vite-plus commands again (cache run) in ${{ matrix.project.name }}
+        working-directory: ${{ runner.temp }}/vite-plus-ecosystem-ci/${{ matrix.project.name }}${{ matrix.project.directory && format('/{0}', matrix.project.directory) || '' }}
+        env:
+          VITE_LOG: debug
+          VITE_LOG_OUTPUT: chrome-json
+        run: ${{ matrix.project.command }}
+
+      - name: Collect trace files
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p ${{ runner.temp }}/trace-artifacts
+          # Chrome tracing writes trace-*.json in the cwd of the process
+          find ${{ runner.temp }}/vite-plus-ecosystem-ci/${{ matrix.project.name }} -name 'trace-*.json' -exec cp {} ${{ runner.temp }}/trace-artifacts/ \; 2>/dev/null || true
+          # Also check the workspace root
+          find $GITHUB_WORKSPACE -maxdepth 1 -name 'trace-*.json' -exec cp {} ${{ runner.temp }}/trace-artifacts/ \; 2>/dev/null || true
+          ls -la ${{ runner.temp }}/trace-artifacts/ 2>/dev/null || echo "No trace files found"
+
+      - name: Upload trace artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: trace-${{ matrix.project.name }}-${{ matrix.os }}
+          path: ${{ runner.temp }}/trace-artifacts/
+          retention-days: 7
+          if-no-files-found: ignore
 
   notify-failure:
     name: Notify on failure

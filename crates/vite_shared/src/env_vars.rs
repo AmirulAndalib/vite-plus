@@ -18,6 +18,9 @@ pub const VITE_PLUS_HOME: &str = "VITE_PLUS_HOME";
 /// Log filter string for `tracing_subscriber` (e.g. `"debug"`, `"vite_task=trace"`).
 pub const VITE_LOG: &str = "VITE_LOG";
 
+/// Output mode for tracing (e.g. `"chrome-json"` for Chrome DevTools timeline).
+pub const VITE_LOG_OUTPUT: &str = "VITE_LOG_OUTPUT";
+
 /// NPM registry URL (lowercase form, highest priority).
 pub const NPM_CONFIG_REGISTRY: &str = "npm_config_registry";
 
