@@ -268,13 +268,6 @@ export declare function rewriteScripts(scriptsJson: string, rulesYaml: string): 
 export declare function run(options: CliOptions): Promise<number>;
 
 /**
- * Flush and drop the tracing guard. Must be called before process.exit()
- * because Rust statics in OnceLock are never dropped, and the ChromeLayer
- * FlushGuard only writes trace data to disk when dropped.
- */
-export declare function shutdownTracing(): void;
-
-/**
  * Run a command with fspy tracking, callable from JavaScript.
  *
  * This function wraps `vite_command::run_command_with_fspy` to provide
@@ -343,3 +336,10 @@ export interface RunCommandResult {
   /** Map of relative paths to their access modes */
   pathAccesses: Record<string, PathAccess>;
 }
+
+/**
+ * Flush and drop the tracing guard. Must be called before process.exit()
+ * because Rust statics in OnceLock are never dropped, and the ChromeLayer
+ * FlushGuard only writes trace data to disk when dropped.
+ */
+export declare function shutdownTracing(): void;
