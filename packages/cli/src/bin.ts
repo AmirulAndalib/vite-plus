@@ -10,6 +10,8 @@
  * If no local installation is found, this global dist/bin.js is used as fallback.
  */
 
+const jsStartTime = performance.now();
+
 import { run } from '../binding/index.js';
 import { doc } from './resolve-doc.js';
 import { fmt } from './resolve-fmt.js';
@@ -43,6 +45,11 @@ if (command === 'create') {
   await import('./global/version.js');
 } else {
   // All other commands — delegate to Rust core via NAPI binding
+  if (process.env.VITE_LOG) {
+    console.log(
+      `[vite-plus] JS startup: ${(performance.now() - jsStartTime).toFixed(2)}ms`,
+    );
+  }
   run({
     lint,
     pack,

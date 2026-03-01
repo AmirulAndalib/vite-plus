@@ -75,6 +75,7 @@ fn create_resolver(
     Box::new(move || {
         let tsf = tsf.clone();
         Box::pin(async move {
+            let _span = tracing::debug_span!("js_resolver", resolver = error_message).entered();
             // Call JS function - map napi::Error to anyhow::Error
             let promise: Promise<JsCommandResolvedResult> = tsf
                 .call_async(Ok(()))
@@ -97,6 +98,7 @@ fn create_vite_config_resolver(
     Arc::new(move |package_path: String| {
         let tsf = tsf.clone();
         Box::pin(async move {
+            let _span = tracing::debug_span!("js_resolve_vite_config").entered();
             let promise: Promise<String> = tsf
                 .call_async(Ok(package_path))
                 .await
@@ -118,6 +120,7 @@ fn create_vite_config_resolver(
 /// and process JavaScript callbacks (via ThreadsafeFunction).
 #[napi]
 pub async fn run(options: CliOptions) -> Result<i32> {
+    let _span = tracing::debug_span!("napi_run").entered();
     // Use provided cwd or current directory
     let mut cwd = current_dir()?;
     if let Some(options_cwd) = options.cwd {
