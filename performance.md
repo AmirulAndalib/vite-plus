@@ -4,370 +4,437 @@ Performance measurements from E2E tests (Ubuntu, GitHub Actions runner).
 
 **Test projects**: 9 ecosystem-ci projects (single-package and multi-package monorepos)
 **Node.js**: 22-24 (managed by vite-plus js_runtime)
-**Trace source**: E2E run #22552050124 (73 trace files across 9 projects)
+**Trace sources**:
+- Run #22556278251 — baseline traces (2 runs per project, cache disabled)
+- Run [#22558467033](https://github.com/voidzero-dev/vite-plus/actions/runs/22558467033) — cache-enabled traces (3 runs per project: first, cache hit, cache miss)
 
 ## Architecture Overview
 
-A `vp` command invocation traverses multiple layers:
+A `vp run` command invocation traverses these layers:
 
 ```
 User runs `vp run lint:check`
   |
-  +- [1] Global CLI (Rust binary `vp`)                    ~3-9ms
-  |     +- argv0 processing                                ~40us
-  |     +- Node.js runtime resolution                       ~1.3ms
+  +- [Phase 1] Global CLI (Rust binary `vp`)                ~3-9ms
+  |     +- argv0 processing                                  ~40us
+  |     +- Node.js runtime resolution                        ~1.3ms
   |     +- Module resolution (oxc_resolver)                  ~170us
   |     +- Delegates to local CLI via exec(node bin.js)
   |
-  +- [2] Node.js startup + NAPI loading                    ~3.7ms
+  +- [Phase 2] Node.js startup + NAPI loading                ~3.7ms
   |     +- bin.ts entry -> import NAPI binding -> call run()
   |
-  +- [3] Rust core via NAPI (vite-task session)
-  |     +- Session init                                     ~60us
-  |     +- load_package_graph (workspace discovery)          ~1-10ms
-  |     +- load_user_config_file x N (JS callbacks)          ~168ms-1.3s total
-  |     +- handle_command + resolve (JS callbacks)            ~0.02-1.3ms
-  |     +- Task execution (spawns child processes)
+  +- [Phase 3] Rust core via NAPI (vite-task session)
+  |     +- Session init                                      ~60-80us
+  |     +- plan_from_cli_run_resolved
+  |     |     +- plan_query
+  |     |           +- load_task_graph
+  |     |           |     +- load_package_graph               ~2-5ms
+  |     |           |     +- load_user_config_file x N        ~170ms-1.3s (BOTTLENECK)
+  |     |           +- handle_command (JS callback)           ~0.02-1.5ms
+  |     +- execute_graph
+  |           +- load_from_path (cache state)                 ~0.7-14ms
+  |           +- execute_expanded_graph
+  |                 +- execute_leaf -> execute_spawn
+  |                       +- try_hit (cache lookup)           0-50ms
+  |                       +- [hit]  validate + replay stdout
+  |                       +- [miss] spawn_with_tracking       actual command runs
+  |                       +- [miss] create_post_run_fingerprint + update
   |
-  +- [4] Task spawns (child processes)
-        +- Spawn 1: pnpm install / dependsOn                ~0.95-1.05s
-        +- Spawn 2: actual command                           varies (1-6s)
+  +- [Phase 4] Child process execution                       varies
 ```
+
+## Execution Cache Performance
+
+With `cacheScripts: true`, vite-task caches command outputs keyed by a spawn fingerprint (cwd + program + args + env) and validated by a post-run fingerprint (xxHash3_64 of all files accessed during execution, tracked by fspy).
+
+### Cache Hit Savings (Per-Command)
+
+When cache hits occur, the saved time comes from skipping `spawn_with_tracking` (the actual command execution) and `create_post_run_fingerprint` (post-run file hashing):
+
+| Project | Command | Miss (ms) | Hit (ms) | Saved (ms) | Saved % |
+|---------|---------|-----------|----------|------------|---------|
+| dify | build (next build) | 170,673 | 670 | 170,003 | **99.6%** |
+| vitepress | tests-e2e#test | 26,696 | 250 | 26,446 | **99.1%** |
+| vitepress | tests-init#test | 11,430 | 290 | 11,140 | **97.5%** |
+| vue-mini | test -- --coverage | 6,357 | 217 | 6,140 | **96.6%** |
+| dify | test (3 files) | 6,524 | 349 | 6,175 | **94.7%** |
+| oxlint-plugin-complexity | lint | 4,165 | 232 | 3,933 | **94.4%** |
+| frm-stack | @yourcompany/api#test | 14,760 | 895 | 13,865 | **93.9%** |
+| oxlint-plugin-complexity | build | 3,529 | 219 | 3,310 | **93.8%** |
+| rollipop | -r typecheck (4 tasks) | 8,581 | 697 | 7,884 | **91.9%** |
+| vite-vue-vercel | test | 2,744 | 326 | 2,418 | **88.1%** |
+| oxlint-plugin-complexity | test:run | 1,377 | 212 | 1,165 | **84.6%** |
+| tanstack-start-helloworld | build | 8,844 | 1,383 | 7,461 | **84.4%** |
+| oxlint-plugin-complexity | format:check | 1,355 | 214 | 1,141 | **84.2%** |
+| frm-stack | @yourcompany/backend-core#test | 5,571 | 894 | 4,677 | **83.9%** |
+| oxlint-plugin-complexity | format | 1,419 | 239 | 1,180 | **83.2%** |
+| rollipop | @rollipop/core#test | 2,878 | 671 | 2,208 | **76.7%** |
+| vite-vue-vercel | build | 842 | 328 | 514 | **61.0%** |
+| rollipop | @rollipop/common#test | 1,307 | 663 | 644 | **49.3%** |
+| rollipop | format | 1,257 | 657 | 600 | **47.7%** |
+| frm-stack | typecheck | 1,448 | 918 | 530 | **36.6%** |
+
+### Cache Operation Overhead
+
+#### On Cache Hit
+
+| Operation | Time | Description |
+|-----------|------|-------------|
+| `try_hit` | 0.0–50ms | Look up spawn fingerprint in SQLite, then validate post-run fingerprint |
+| `validate_post_run_fingerprint` | 1–40ms | Re-hash all tracked input files to check if they changed |
+| **Total cache overhead** | **10–50ms** | Negligible compared to saved execution time |
+
+Cache hit total time is dominated by config loading (177–1,316ms depending on project), not cache operations.
+
+#### On Cache Miss (with write-back)
+
+| Operation | Time | Description |
+|-----------|------|-------------|
+| `try_hit` | 0.0–0.1ms | Quick lookup, returns `NotFound` or `FingerprintMismatch` |
+| `spawn_with_tracking` | 200–170,000ms | Execute the actual command with fspy file tracking |
+| `create_post_run_fingerprint` | 2–1,637ms | Hash all files accessed during execution |
+| `update` | 1–200ms | Write fingerprint and outputs to SQLite cache |
+
+### Execution Timeline (Cache Hit vs Miss)
+
+#### Cache Hit Flow
+```
+┌──────────────────┐  ┌─────────┐  ┌──────────────────────────────┐  ┌─────────┐
+│ load_user_config │→│ try_hit │→│ validate_post_run_fingerprint │→│ replay  │
+│   177–1316ms     │  │  <1ms   │  │          1–40ms              │  │ stdout  │
+└──────────────────┘  └─────────┘  └──────────────────────────────┘  └─────────┘
+Total: 200–1400ms (config loading dominates)
+```
+
+#### Cache Miss Flow
+```
+┌──────────────────┐  ┌─────────┐  ┌─────────────────────┐  ┌────────────────────────────┐  ┌────────┐
+│ load_user_config │→│ try_hit │→│ spawn_with_tracking  │→│ create_post_run_fingerprint │→│ update │
+│   177–1316ms     │  │  <1ms   │  │   200–170,000ms     │  │        2–1637ms             │  │ 1–200ms│
+└──────────────────┘  └─────────┘  └─────────────────────┘  └────────────────────────────┘  └────────┘
+Total: 400–172,000ms (spawn dominates)
+```
+
+### Cache Miss Root Causes
+
+From CI log analysis, cache misses on the "cache hit" run fall into these categories:
+
+| Miss Reason | Count | Explanation |
+|-------------|-------|-------------|
+| `content of input 'package.json' changed` | 60 | Expected — from the intentional cache invalidation step |
+| `content of input '' changed` | 9 | Bug — fspy tracks an empty path (working directory listing) which changes between runs |
+| `content of input 'dist/...' changed` | ~10 | Expected — build outputs change between runs (e.g., vitepress `build:client` changes `dist/`) |
+| `content of input 'tsconfig.json' changed` | 3 | Side effect of prior commands modifying project config |
+
+The `content of input '' changed` issue affects vue-mini's `prettier`, `eslint`, and `tsc` commands — fspy records the working directory itself as a read, and its directory listing changes between runs because the first command creates or modifies files. This is the main reason vue-mini and rollipop show low cache hit rates.
 
 ## Cross-Project Comparison
 
-Overhead measured from all 9 ecosystem-ci projects (Ubuntu, first run):
+NAPI overhead measured from trace files (Ubuntu, all invocations):
 
-| Project                   | Packages | Global CLI | load_package_graph | Config loading | Total overhead |
-| ------------------------- | -------- | ---------- | ------------------ | -------------- | -------------- |
-| oxlint-plugin-complexity  | 1        | 8.8ms      | 1.0ms              | **168ms**      | **170ms**      |
-| vue-mini                  | 4        | 6.1ms      | 2.2ms              | **172ms**      | **175ms**      |
-| dify                      | 1        | 4-14ms     | 10.0ms             | **181ms**      | **196ms**      |
-| vitepress                 | 4        | 3.9ms      | 1.2ms              | **196ms**      | **199ms**      |
-| vite-vue-vercel           | 1        | 3-7ms      | 1.4ms              | **360ms**      | **364ms**      |
-| rollipop                  | 6        | 4-5ms      | 2.7ms              | **639ms**      | **648ms**      |
-| frm-stack                 | 10-11    | 3-7ms      | 3.5ms              | **836ms**      | **843ms**      |
-| tanstack-start-helloworld | 1        | 4-6ms      | 0.1ms              | **1,292ms**    | **1,294ms**    |
-| vibe-dashboard            | N/A      | 4-7ms      | N/A                | N/A            | N/A            |
+| Project                   | Packages | Config loading  | Overhead      | n  |
+| ------------------------- | -------- | --------------- | ------------- | -- |
+| vue-mini                  | 1        | **170-218ms**   | **173-223ms** | 8  |
+| oxlint-plugin-complexity  | 1-2      | **177-249ms**   | **184-258ms** | 10 |
+| vitepress                 | 4        | **175-202ms**   | **182-327ms** | 12 |
+| vite-vue-vercel           | 1        | **320-328ms**   | **326-338ms** | 4  |
+| rollipop                  | 6        | **635-658ms**   | **643-670ms** | 14 |
+| frm-stack                 | 10-11    | **959-993ms**   | **968-1002ms** | 10 |
+| tanstack-start-helloworld | 1        | **1305-1320ms** | **1308-1337ms** | 4 |
+| vibe-dashboard            | --       | --              | --            | 0  |
+| dify                      | --       | --              | --            | 0  |
 
-vibe-dashboard only produced global CLI traces (no NAPI traces captured).
+vibe-dashboard and dify only produced global CLI traces (no NAPI traces captured). See Known Issues.
 
-Config loading accounts for **95-99%** of total NAPI overhead in every project. Everything else is negligible.
+Config loading accounts for **95-99%** of total NAPI overhead in every project.
 
 ### Config Loading Patterns
 
-The first `load_user_config_file` call always pays a fixed JS module initialization cost (~150-170ms for typical projects). Projects with heavy Vite plugins pay much more:
+The first `load_user_config_file` call pays a fixed JS module initialization cost (~150-170ms). Projects with heavy Vite plugins pay more:
 
-| Project                   | First config | Biggest config | Subsequent configs |
-| ------------------------- | ------------ | -------------- | ------------------ |
-| oxlint-plugin-complexity  | 168ms        | 168ms          | N/A (single)       |
-| vue-mini                  | 164ms        | 164ms          | 2-3ms              |
-| vitepress                 | 168ms        | 168ms          | 3-14ms             |
-| dify                      | 181ms        | 181ms          | N/A (single)       |
-| vite-vue-vercel           | 360ms        | 360ms          | N/A (single)       |
-| rollipop                  | 155ms        | 155ms          | 100-147ms          |
-| frm-stack                 | 148ms        | **660ms**      | 3-12ms             |
-| tanstack-start-helloworld | **1,292ms**  | **1,292ms**    | N/A (single)       |
+| Project                   | First config  | Largest config       | Subsequent configs |
+| ------------------------- | ------------- | -------------------- | ------------------ |
+| vue-mini                  | 164-177ms     | same                 | 2-3ms              |
+| oxlint-plugin-complexity  | 177-249ms     | same                 | N/A (single)       |
+| vitepress                 | 158-201ms     | same                 | 5-7ms              |
+| vite-vue-vercel           | 320-328ms     | same                 | N/A (single)       |
+| rollipop                  | 150-165ms     | 146-168ms (#3)       | 100-155ms each     |
+| frm-stack                 | 165-173ms     | **750-786ms** (#4-5) | 3-12ms             |
+| tanstack-start-helloworld | **1305-1320ms** | same               | N/A (single)       |
 
 Key observations:
 
-- **tanstack-start-helloworld** has the slowest single config load (1.3s) despite being a single-package project. This is entirely due to heavy TanStack/Vinxi plugin dependencies.
-- **frm-stack** has one "monster" config at ~660ms (a specific workspace package with heavy plugins), accounting for ~77% of its total config loading time.
-- **rollipop** is unusual: subsequent config loads remain expensive (100-147ms) rather than dropping to 2-12ms, suggesting each package imports distinct heavy dependencies.
-- Simple projects (oxlint-plugin-complexity, vue-mini, vitepress) have a consistent ~165ms first-config cost, representing the baseline JS module initialization overhead.
+- **tanstack-start-helloworld** has the slowest single config load (1.3s) despite being a single-package project. Entirely due to heavy TanStack/Vinxi plugin dependencies.
+- **frm-stack** has one "monster" config at ~750-786ms (a specific workspace package with heavy plugins), accounting for ~77% of total config loading.
+- **rollipop** is unusual: subsequent config loads remain expensive (100-155ms) rather than dropping to 2-12ms, suggesting each package imports distinct heavy dependencies.
+- Simple projects (vue-mini, vitepress) have a consistent ~165ms first-config cost, representing the baseline JS module initialization overhead.
 
 ## Phase 1: Global CLI (Rust binary)
 
 Measured via Chrome tracing from the `vp` binary process.
-Timestamps are relative to process start (microseconds).
 
-### Breakdown (vibe-dashboard, 6 invocations, Ubuntu)
+### Cross-Project Global CLI Overhead
+
+| Project                   | Range      | n  |
+| ------------------------- | ---------- | -- |
+| vite-vue-vercel           | 3.4-6.9ms  | 10 |
+| rollipop                  | 3.7-4.7ms  | 14 |
+| tanstack-start-helloworld | 3.7-6.2ms  | 4  |
+| vitepress                 | 3.3-3.9ms  | 12 |
+| vibe-dashboard            | 4.1-6.7ms  | 6  |
+| vue-mini                  | 5.5-6.1ms  | 8  |
+| oxlint-plugin-complexity  | 3.1-8.8ms  | 10 |
+| dify                      | 4.3-13.6ms | 6  |
+| frm-stack                 | 3.4-7.4ms  | 10 |
+
+Global CLI overhead is consistently **3-9ms** across all projects, with rare outliers up to 14ms. This is the Rust binary resolving Node.js version, finding the local vite-plus install via oxc_resolver, and delegating via exec.
+
+### Breakdown (vibe-dashboard, 6 invocations)
 
 | Stage                     | Time from start | Duration   |
 | ------------------------- | --------------- | ---------- |
 | argv0 processing          | 37-57us         | ~40us      |
 | Runtime resolution start  | 482-684us       | ~500us     |
 | Node.js version selected  | 714-1042us      | ~300us     |
-| LTS alias resolved        | 723-1075us      | ~10us      |
-| Version index cache check | 1181-1541us     | ~400us     |
 | Node.js version resolved  | 1237-1593us     | ~50us      |
 | Node.js cache confirmed   | 1302-1627us     | ~50us      |
 | **oxc_resolver start**    | **3058-7896us** | --         |
 | oxc_resolver complete     | 3230-8072us     | **~170us** |
 | Delegation to Node.js     | 3275-8160us     | ~40us      |
 
-### Cross-Project Global CLI Overhead
-
-| Project                   | Range      |
-| ------------------------- | ---------- |
-| vite-vue-vercel           | 3.4-6.9ms  |
-| rollipop                  | 3.7-4.7ms  |
-| tanstack-start-helloworld | 3.7-6.2ms  |
-| vitepress                 | 3.9ms      |
-| vibe-dashboard            | 4.1-6.7ms  |
-| vue-mini                  | 6.1ms      |
-| oxlint-plugin-complexity  | 8.8ms      |
-| dify                      | 4.3-13.6ms |
-| frm-stack                 | 3.4-7.4ms  |
-
-Global CLI overhead is consistently **3-9ms** across all projects, with rare outliers up to 14ms. This is the Rust binary resolving Node.js version, finding the local vite-plus install via oxc_resolver, and delegating via exec.
-
 ## Phase 2: Node.js Startup + NAPI Loading
 
-Measured from NAPI-side Chrome traces (frm-stack project).
+Measured from NAPI-side Chrome traces.
 
 The NAPI `run()` function is first called at **~3.7ms** from Node.js process start:
 
 | Event                   | Time (us) | Notes                              |
 | ----------------------- | --------- | ---------------------------------- |
-| NAPI `run()` entered    | 3,682     | First trace event from NAPI module |
-| `napi_run: start`       | 3,950     | After ThreadsafeFunction setup     |
-| `cli::main` span begins | 4,116     | CLI argument processing starts     |
+| NAPI `run()` entered    | ~3,700    | First trace event from NAPI module |
+| `napi_run: start`       | ~3,950    | After ThreadsafeFunction setup     |
+| `cli::main` span begins | ~4,100    | CLI argument processing starts     |
 
-This means **Node.js startup + ES module loading + NAPI binding initialization takes ~3.7ms**.
+Node.js startup + ES module loading + NAPI binding initialization takes **~3.7ms**.
 
 ## Phase 3: Rust Core via NAPI (vite-task)
 
-### NAPI-side Detailed Breakdown (frm-stack `vp run lint:check`)
+### Detailed Timeline (frm-stack `vp run lint:check`, first run)
 
 From Chrome trace, all times in us from process start:
 
 ```
-  3,682   NAPI run() entered
-  3,950   napi_run: start
-  4,116   cli::main begins
-  4,742   execute_vite_task_command begins
-  4,865     session::init begins
-  4,907       init_with begins
-  4,923       init_with ends                              --  16us
-  4,924     session::init ends                            --  59us
-  4,925     session::main begins
-  4,931       plan_from_cli_run_resolved begins
-  4,935         plan_query begins
-  4,941           load_task_graph begins
-  4,943             task_graph::load begins
-  4,944               load_package_graph begins           == 3.8ms
-  8,764               load_package_graph ends
-  8,779           load_user_config_file #1 begins         == 164ms (first vite.config.ts load)
-173,248           load_user_config_file #1 ends
-173,265           load_user_config_file #2 begins         == 12ms
-185,212           load_user_config_file #2 ends
-185,221           load_user_config_file #3 begins         == 3.4ms
-188,666           load_user_config_file #3 ends
-188,675           load_user_config_file #4 begins         == 741ms (cold import of workspace package config)
-929,476           load_user_config_file #4 ends
-  ...     (subsequent loads: ~3-5ms each)
+  ~3,700   NAPI run() entered
+  ~3,950   napi_run: start
+   4,462   cli::main begins
+           execute_vite_task_command begins
+   4,462     session::init                                    --  80us
+   4,552     plan_from_cli_run_resolved begins
+               plan_query begins
+                 load_task_graph begins
+   4,569           load_package_graph                         --  4.3ms
+   8,878           load_user_config_file x10                  -- 983ms total
+                     #1: 165ms (cold JS init)
+                     #2: 12ms
+                     #3: 4ms
+                     #4: 776ms (monster config)
+                     #5-#10: 3-5ms each
+ 992,988        handle_command                                --  0.04ms
+ 993,336     execute_graph begins
+ 993,385       load_from_path (cache state)                   --  7.4ms
+1,000,873     execute_expanded_graph begins
+1,001,667       execute_spawn begins
+                  try_hit → spawn_with_tracking               -- command runs here
 ```
 
-### Critical Finding: vite.config.ts Loading is the Bottleneck
-
-The **`load_user_config_file`** callback (which calls back into JavaScript to load `vite.config.ts` for each workspace package) dominates the task graph loading time:
-
-| Config Load                     | Duration       | Notes                                                      |
-| ------------------------------- | -------------- | ---------------------------------------------------------- |
-| First package                   | **164ms**      | Cold import: requires JS module resolution + transpilation |
-| Second package                  | **12ms**       | Warm: shared dependencies already cached                   |
-| Third package                   | **3.4ms**      | Warm: nearly all deps cached                               |
-| Fourth package (different deps) | **741ms**      | Cold: imports new heavy dependencies                       |
-| Subsequent packages             | **3-5ms** each | All warm                                                   |
+**Total overhead before task execution: ~1001ms**, of which **983ms (98%) is vite.config.ts loading**.
 
 ### frm-stack Per-Command Breakdown (10 traces, all values in ms)
 
-| Command                          | Run   | CLI  | PkgGraph | 1st Cfg | Total Cfg | Cfg Count | Overhead | hdl_cmd |
-| -------------------------------- | ----- | ---- | -------- | ------- | --------- | --------- | -------- | ------- |
-| `lint:check`                     | 1st   | 6.46 | 3.20     | 146     | 889       | 10        | 901      | 0.02    |
-| `lint:check`                     | cache | 5.06 | 3.34     | 145     | 840       | 11        | 845      | 0.02    |
-| `format:check`                   | 1st   | 7.44 | 5.36     | 150     | 825       | 10        | 833      | 0.02    |
-| `format:check`                   | cache | 3.58 | 3.44     | 148     | 829       | 11        | 834      | 0.00    |
-| `typecheck`                      | 1st   | 3.64 | 3.20     | 153     | 831       | 10        | 837      | 0.02    |
-| `typecheck`                      | cache | 4.41 | 3.35     | 144     | 816       | 11        | 821      | 0.00    |
-| `@yourcompany/api#test`          | 1st   | 5.85 | 3.39     | 151     | 838       | 11        | 844      | 1.09    |
-| `@yourcompany/api#test`          | cache | 4.29 | 2.91     | 145     | 835       | 11        | 842      | 1.17    |
-| `@yourcompany/backend-core#test` | 1st   | 3.40 | 2.91     | 147     | 831       | 11        | 839      | 1.08    |
-| `@yourcompany/backend-core#test` | cache | 3.90 | 3.35     | 145     | 824       | 11        | 831      | 1.16    |
+| Command                          | Run | PkgGr | 1st Cfg | Total Cfg | Cfgs | Overhead | CacheLoad | hdl_cmd |
+| -------------------------------- | --- | ----- | ------- | --------- | ---- | -------- | --------- | ------- |
+| `lint:check`                     | 1st | 4.3   | 165     | 983       | 10   | 1002     | 7.4       | 0.04    |
+| `format:check`                   | 1st | 4.1   | 172     | 964       | 10   | 972      | 0.8       | 0.00    |
+| `typecheck`                      | 1st | 4.4   | 169     | 964       | 10   | 971      | 0.8       | 0.06    |
+| `@yourcompany/api#test`          | 1st | 4.8   | 173     | 986       | 11   | 996      | 0.8       | 1.53    |
+| `@yourcompany/backend-core#test` | 1st | 4.8   | 173     | 990       | 11   | 1001     | 1.3       | 1.42    |
+| `lint:check`                     | 2nd | 4.7   | 169     | 990       | 11   | 1001     | 0.8       | 0.03    |
+| `format:check`                   | 2nd | 4.3   | 167     | 961       | 11   | 969      | 0.8       | 0.08    |
+| `typecheck`                      | 2nd | 4.5   | 165     | 993       | 11   | 1000     | 0.8       | 0.00    |
+| `@yourcompany/api#test`          | 2nd | 4.7   | 166     | 959       | 11   | 969      | 1.4       | 1.51    |
+| `@yourcompany/backend-core#test` | 2nd | 4.9   | 168     | 980       | 11   | 990      | 1.1       | 1.41    |
 
 ### frm-stack Aggregate Statistics
 
-| Metric                               | Average | n   |
-| ------------------------------------ | ------- | --- |
-| load_package_graph                   | 3.45ms  | 10  |
-| Total config loading per command     | 835.9ms | 10  |
-| First config load                    | 147.5ms | 10  |
-| "Monster" config load (~config #4)   | ~660ms  | 10  |
-| Other config loads                   | ~4.2ms  | ~87 |
-| Total NAPI overhead                  | 842.7ms | 10  |
-| Global CLI overhead                  | 4.80ms  | 10  |
-| handle_command (non-test)            | 0.02ms  | 6   |
-| handle_command (test w/ js_resolver) | 1.13ms  | 4   |
+| Metric                               | Average | Range         | n   |
+| ------------------------------------ | ------- | ------------- | --- |
+| load_package_graph                   | 4.5ms   | 4.1-4.9ms     | 10  |
+| Total config loading per command     | 977ms   | 959-993ms     | 10  |
+| First config load                    | 169ms   | 165-173ms     | 10  |
+| "Monster" config load (~config #4/5) | 763ms   | 750-786ms     | 10  |
+| Other config loads                   | ~4ms    | 3-12ms        | ~90 |
+| Total NAPI overhead                  | 987ms   | 968-1002ms    | 10  |
+| Cache state load (load_from_path)    | 1.5ms   | 0.8-7.4ms     | 10  |
+| handle_command (non-test)            | 0.03ms  | 0.00-0.08ms   | 6   |
+| handle_command (test w/ js_resolver) | 1.46ms  | 1.41-1.53ms   | 4   |
 
-### First Run vs Cache Run (frm-stack averages)
+### First Run vs Second Run (frm-stack averages)
 
-| Metric               | First Run | Cache Run | Delta         |
-| -------------------- | --------- | --------- | ------------- |
-| Total NAPI overhead  | 850.7ms   | 834.7ms   | -16ms (-1.9%) |
-| load_package_graph   | 3.6ms     | 3.3ms     | -0.3ms        |
-| Total config loading | 843.0ms   | 828.8ms   | -14ms (-1.7%) |
-| Global CLI overhead  | 5.4ms     | 4.2ms     | -1.1ms (-21%) |
+| Metric               | First Run | Second Run | Delta          |
+| -------------------- | --------- | ---------- | -------------- |
+| Total NAPI overhead  | 988ms     | 985ms      | -3ms (-0.3%)   |
+| load_package_graph   | 4.5ms     | 4.6ms      | +0.1ms         |
+| Total config loading | 977ms     | 977ms      | ~0ms           |
+| First config load    | 170ms     | 167ms      | -3ms           |
+| Monster config       | 763ms     | 763ms      | ~0ms           |
+| Cache state load     | 2.2ms     | 1.0ms      | -1.2ms (-55%)  |
 
-Config loading is **not cached** between invocations -- it re-resolves all Vite configs from JavaScript every time. The ~16ms improvement on cache runs is from OS-level filesystem caching, not application-level caching.
+Config loading is **not cached** between invocations -- every `vp run` command re-resolves all Vite configs from JavaScript. There is no measurable difference between first and second runs.
 
-### Callback Timing (`handle_command` + `resolve`)
+### Callback Timing (`handle_command` + `js_resolver`)
 
 After the task graph is loaded, vite-task calls back into JavaScript to resolve the tool binary:
 
 ```
-937,757   handle_command begins
-937,868     resolve begins
-937,873       js_resolver begins (test command)
-939,126       js_resolver ends                            -- 1.25ms
-939,187     resolve ends
-939,189   handle_command ends                             -- 1.43ms
+ 996,446   handle_command begins
+ 996,710     resolve begins
+               js_resolver begins (test command)
+ 997,880       js_resolver ends                              -- 1.17ms
+ 998,040     resolve ends
+ 998,126   handle_command ends                               -- 1.53ms
 ```
 
-The `js_resolver` callback (which locates the test runner binary via JavaScript) takes **~1.25ms**. Non-test commands (lint, fmt, typecheck) skip this callback and take only ~0.02ms.
+The `js_resolver` callback (which locates the test runner binary via JavaScript) takes **~1.1ms**. Non-test commands (lint, fmt, typecheck) skip this callback and resolve directly, taking only ~0.03ms.
 
-## Phase 4: Task Execution (vibe-dashboard)
+### rollipop: Multi-Spawn Execution
 
-### Spawn Timing (First Run)
-
-| Command        | Spawn 1 (setup)              | Spawn 2 (execution)           | Total |
-| -------------- | ---------------------------- | ----------------------------- | ----- |
-| `vp fmt`       | 1.05s (977 reads, 50 writes) | 1.00s (163 reads, 1 write)    | ~2.1s |
-| `vp test`      | 0.96s (977 reads, 50 writes) | 5.71s (4699 reads, 26 writes) | ~6.7s |
-| `vp run build` | 0.95s (977 reads, 50 writes) | 1.61s (3753 reads, 17 writes) | ~2.6s |
-
-### Spawn Timing (Second Run -- Cache Available)
-
-| Command        | Spawn 1 (setup)              | Spawn 2 (execution)          | Total | Delta     |
-| -------------- | ---------------------------- | ---------------------------- | ----- | --------- |
-| `vp fmt`       | 0.95s (977 reads, 50 writes) | 0.97s (167 reads, 3 writes)  | ~1.9s | -0.2s     |
-| `vp test`      | 0.95s (977 reads, 50 writes) | 4.17s (1930 reads, 4 writes) | ~5.1s | **-1.6s** |
-| `vp run build` | 0.96s (977 reads, 50 writes) | **cache hit (replayed)**     | ~1.0s | **-1.6s** |
-
-### Key Observations
-
-- **Spawn 1 is constant** (~0.95-1.05s, 977 path_reads, 50 path_writes) regardless of command or cache state. This is the workspace/task-graph loading + pnpm resolution overhead.
-- **`vp run build` cache hit**: On second run, the build was fully replayed from cache, saving 1.19s. The 977-read spawn 1 still executes.
-- **`vp test` improvement**: Second run read 1930 paths (vs 4699), suggesting OS filesystem caching reduced disk I/O.
-
-## Phase 5: Task Cache Effectiveness
-
-vite-task implements a file-system-aware task cache at `node_modules/.vite/task-cache`.
-
-| Command        | First Run | Cache Run | Cache Hit? | Savings                           |
-| -------------- | --------- | --------- | ---------- | --------------------------------- |
-| `vp fmt`       | 2.1s      | 1.9s      | No         | --                                |
-| `vp test`      | 6.7s      | 5.1s      | No         | -1.6s (OS cache)                  |
-| `vp run build` | 2.6s      | 1.0s      | **Yes**    | **-1.6s** (1.19s from task cache) |
-
-**Only `vp run build` was cache-eligible.** Formatting and test commands are not cached (side effects / non-deterministic outputs).
-
-## End-to-End Timeline: Full Command Lifecycle
-
-Combining all phases for a single `vp run lint:check` invocation (frm-stack):
+Some commands spawn multiple child processes sequentially (topological order from `dependsOn`):
 
 ```
-T+0.00ms    Global CLI starts (Rust binary)
-T+0.04ms    argv0 processed
-T+0.50ms    Runtime resolution begins
-T+1.30ms    Node.js version resolved (cached)
-T+3.30ms    oxc_resolver finds local vite-plus              -- ~170us
-T+3.35ms    exec(node, [dist/bin.js, "run", "lint:check"])   -- process replaced
---- Node.js process starts ---
-T+3.70ms    NAPI run() called (Node.js startup overhead)
-T+4.00ms    napi_run: start
-T+4.12ms    cli::main begins
-T+4.74ms    execute_vite_task_command begins
-T+4.94ms    load_package_graph begins
-T+8.76ms    load_package_graph ends                          -- 3.8ms
-T+8.78ms    load_user_config_file #1 begins (JS callback)
-T+173ms     load_user_config_file #1 ends                    -- 164ms * bottleneck
-  ...       (more config loads, including one ~660ms monster)
-T+937ms     handle_command begins
-T+939ms     handle_command ends (js_resolver: 1.25ms)
-T+940ms     Task execution starts (child process spawn)
-  ...       (actual command runs)
+rollipop `vp run -r build` (first run):
+  ~668us    execute_expanded_graph begins
+  ~678us      execute_leaf #1: spawn_inherited (1898ms)    -- @rollipop/common#build
+  2,576us     execute_leaf #2: spawn_inherited (2668ms)    -- @rollipop/core#build
+  5,244us     execute_leaf #3: spawn_inherited (2138ms)    -- @rollipop/rollipop#build
+  7,382us     execute_leaf #4: spawn_inherited (1859ms)    -- @rollipop/dev-server#build
+  Total spawn time: 8563ms (sequential due to dependsOn)
 ```
 
-**Total overhead before task execution: ~940ms**, of which **~930ms (99%) is vite.config.ts loading**.
+### vitepress: Build Pipeline
 
-## Wall-Clock Timelines (vibe-dashboard, Ubuntu)
-
-### First Run
+The `vp run build` command spawns 3 sequential phases:
 
 ```
-19:16:44.039  vp fmt    -- pnpm download starts
-19:16:44.170  vp fmt    -- cache dir created
-19:16:45.158  vp fmt    -- spawn 1 finished (setup)
-19:16:46.028  vp fmt    -- spawn 2 finished (biome)           Total: ~2.0s
-19:16:46.082  vp test   -- pnpm resolution starts
-19:16:46.084  vp test   -- cache dir created
-19:16:47.057  vp test   -- spawn 1 finished (setup)
-19:16:52.750  vp test   -- spawn 2 finished (vitest)          Total: ~6.7s
-19:16:52.846  vp run build -- cache dir created
-19:16:53.793  vp run build -- spawn 1 finished (setup)
-19:16:55.398  vp run build -- spawn 2 finished (vite build)   Total: ~2.6s
+vitepress `vp run build` (first run):
+  ~185us    execute_expanded_graph begins
+  ~185us      spawn_inherited #1: pnpm build:prepare        -- 466ms
+  ~651us      spawn_inherited #2: pnpm build:client          -- 8362ms
+  9,013us     spawn_inherited #3: pnpm build:node            -- 10312ms
+  Total: 19.1s (sequential pipeline)
 ```
 
-**Total first run: ~11.4s** (3 commands sequential)
+## Phase 4: Child Process Execution
 
-### Cache Run
+Wall-clock timestamps from CI output logs. The `process uptime` value shows Node.js startup time (consistent ~33-55ms across all projects).
 
-```
-19:16:56.446  vp fmt    -- cache dir created
-19:16:57.399  vp fmt    -- spawn 1 finished
-19:16:58.368  vp fmt    -- spawn 2 finished                   Total: ~1.9s
-19:16:58.441  vp test   -- cache dir created
-19:16:59.390  vp test   -- spawn 1 finished
-19:17:03.556  vp test   -- spawn 2 finished                   Total: ~5.1s
-19:17:03.641  vp run build -- cache dir created
-19:17:04.596  vp run build -- spawn 1 finished
-19:17:05.040  vp run build -- cache replayed                  Total: ~1.4s
-```
+### Process Uptime (Node.js startup)
 
-**Total cache run: ~8.6s** (-24% from first run)
+| Project                   | Range         |
+| ------------------------- | ------------- |
+| vibe-dashboard            | 35.0-35.1ms   |
+| rollipop                  | 32.4-37.8ms   |
+| frm-stack                 | 34.2-56.2ms   |
+| vue-mini                  | 38.6-54.8ms   |
+| vitepress                 | 32.4-35.9ms   |
+| tanstack-start-helloworld | 33.2-33.9ms   |
+| oxlint-plugin-complexity  | 33.0-47.2ms   |
+| vite-vue-vercel           | 32.1-33.2ms   |
+| dify                      | 33.8-40.1ms   |
+
+Node.js startup is consistently **32-55ms** across all projects.
+
+## Key Findings
+
+### 1. Cache hits save 50–99% of execution time
+
+When cache hits occur, they are highly effective. The remaining time is almost entirely config loading (`load_user_config_file`), which must run every time regardless of cache status.
+
+### 2. Config loading is the dominant bottleneck
+
+Config loading accounts for **95-99%** of NAPI overhead and sets the floor for cache hit response time:
+- Small projects (vue-mini, oxlint): ~180ms
+- Medium projects (rollipop, vitepress): ~230–640ms
+- Large projects (frm-stack): ~850ms
+- Complex projects (tanstack-start, dify): ~1,300ms
+
+Config loading is not cached between `vp` invocations — every command re-resolves all configs from JavaScript.
+
+### 3. Cache fingerprinting overhead is negligible
+
+`create_post_run_fingerprint` (2–60ms per task for most projects) and `validate_post_run_fingerprint` (1–40ms) add minimal overhead. The exception is dify where fingerprinting takes 170–1,637ms due to the large number of files tracked.
+
+### 4. Within-run deduplication works
+
+vitepress runs `VITE_TEST_BUILD=1 vp run tests-e2e#test` which is identical to the prior `vp run tests-e2e#test`. The second invocation is always a cache hit (even on the first run), saving ~26s each time.
+
+### 5. Empty-path fingerprinting reduces cache hit rate
+
+Commands whose child processes read the working directory (path `''`) get a volatile directory-listing fingerprint that changes between runs. This affects `prettier`, `eslint`, and `tsc` in vue-mini and `lint` in rollipop, dropping their overall cache hit speedup to 1.2–1.5x.
 
 ## Summary of Bottlenecks
 
-| Bottleneck                    | Time                       | % of overhead | Optimization opportunity                             |
-| ----------------------------- | -------------------------- | ------------- | ---------------------------------------------------- |
-| vite.config.ts loading (cold) | **168ms-1.3s** per project | **95-99%**    | Cache config results, lazy loading, parallel loading |
-| Spawn 1 (pnpm/setup)          | **~1s**                    | --            | Persistent process, avoid re-resolving               |
-| load_package_graph            | **0.1-10ms**               | <1%           | Already fast                                         |
-| Session init                  | **~60us**                  | <0.01%        | Already fast                                         |
-| Global CLI overhead           | **3-9ms**                  | <0.5%         | Already fast                                         |
-| Node.js + NAPI startup        | **~3.7ms**                 | <0.4%         | Already fast                                         |
-| oxc_resolver                  | **~170us**                 | <0.02%        | Already fast                                         |
-| js_resolver callback          | **~1.25ms**                | <0.1%         | Already fast                                         |
+| Bottleneck                    | Time                       | % of overhead |
+| ----------------------------- | -------------------------- | ------------- |
+| vite.config.ts loading (cold) | **170ms-1.3s** per command | **95-99%**    |
+| load_package_graph            | **2-5ms**                  | <1%           |
+| Cache state load              | **0.7-14ms**               | <1%           |
+| Cache operations (hit)        | **10-50ms**                | <5%           |
+| handle_command (js_resolver)  | **~1.5ms**                 | <0.2%         |
+| Session init                  | **~70us**                  | <0.01%        |
+| Node.js + NAPI startup        | **~3.7ms**                 | <0.4%         |
+| Global CLI overhead           | **3-9ms**                  | <0.5%         |
+| oxc_resolver                  | **~170us**                 | <0.02%        |
 
-**The single most impactful optimization would be caching or parallelizing `load_user_config_file` calls.** Across all projects:
+Config loading breakdown across projects:
 
-- Simple configs (vue-mini, vitepress): ~168ms baseline, nearly all from first-config JS initialization
+- Simple configs (vue-mini, vitepress): ~170ms baseline, nearly all from first-config JS initialization
 - Heavy single configs (tanstack-start-helloworld): up to 1.3s for a single config with heavy plugins
-- Large monorepos (frm-stack, 10 packages): ~836ms total, dominated by one "monster" config (~660ms)
-- Distinct-dependency monorepos (rollipop, 6 packages): ~639ms, each package importing different heavy dependencies (100-155ms each)
-
-Config loading is not cached between `vp` invocations. Every command re-resolves all configs from JavaScript.
-
-## Inter-Process Communication
-
-vite-task uses Unix shared memory (`/dev/shm`) for parent-child process communication during task execution:
-
-- Creates persistent mapping at `/shmem_<hash>`
-- Maps memory into address space for fast IPC
-- Cleaned up after spawn completion
+- Large monorepos (frm-stack, 10 packages): ~977ms total, dominated by one "monster" config (~763ms)
+- Distinct-dependency monorepos (rollipop, 6 packages): ~644ms, each package importing different heavy dependencies (100-155ms each)
 
 ## Known Issues
 
+### vibe-dashboard and dify produce no NAPI traces
+
+These projects produce only global CLI traces. The NAPI-side tracing likely doesn't flush properly because:
+- `vp fmt` and `vp test` (Synthesizable commands) may exit before `shutdownTracing()` is called
+- The `shutdownTracing()` fix (commit `72b23304`) may not cover all exit paths for these command types
+
+### Empty-path fingerprinting causes spurious cache misses
+
+fspy tracks the working directory itself (path `''`) as a file read. The directory listing fingerprint changes between runs when prior commands create or modify files, causing `PostRunFingerprintMismatch`. This affects 9 commands across vue-mini and rollipop (`prettier`, `eslint`, `tsc`, `lint`).
+
 ### Trace files break formatter (fixed)
 
-When `VITE_LOG_OUTPUT=chrome-json` is set, trace files (`trace-*.json`) were written to the project working directory. Formatters (oxfmt/prettier) pick up these files and fail with "Unterminated string constant" because trace files may contain truncated JSON (especially on Windows where PATH strings are very long).
+When `VITE_LOG_OUTPUT=chrome-json` is set, trace files were written to the project working directory. Formatters pick up these files and fail with parse errors.
 
 **Fix**: Set `VITE_LOG_OUTPUT_DIR` to write trace files to a dedicated directory outside the workspace.
 
-### NAPI trace files empty for some projects
+## Tracing Instrumentation
 
-The Chrome tracing `FlushGuard` stored in a static `OnceLock` is never dropped when `process.exit()` is called. Fixed by adding `shutdownTracing()` NAPI function called before exit (commit `72b23304`). Some projects (vibe-dashboard) still only produce global CLI traces and no NAPI traces.
+The following spans are instrumented at `debug` level in vite-task:
+
+| Span | Location | Purpose |
+|------|----------|---------|
+| `try_hit` | `session/cache/mod.rs` | Cache lookup with spawn fingerprint matching |
+| `validate_post_run_fingerprint` | `session/execute/fingerprint.rs` | Re-hash tracked files to validate cache |
+| `create_post_run_fingerprint` | `session/execute/fingerprint.rs` | Hash all fspy-tracked files after execution |
+| `update` | `session/cache/mod.rs` | Write cache entry to SQLite |
+| `spawn_with_tracking` | `session/execute/spawn.rs` | Execute command with fspy file tracking |
+| `load_from_path` | `session/cache/mod.rs` | Open/create SQLite cache database |
+| `execute_spawn` | `session/execute/mod.rs` | Full cache-aware execution lifecycle |
+
+Enabled via: `VITE_LOG=debug VITE_LOG_OUTPUT=chrome-json VITE_LOG_OUTPUT_DIR=<path>`
 
 ## Methodology
 
@@ -377,13 +444,10 @@ The Chrome tracing `FlushGuard` stored in a static `OnceLock` is never dropped w
 - **Measurement PRs**:
   - vite-task: https://github.com/voidzero-dev/vite-task/pull/178
   - vite-plus: https://github.com/voidzero-dev/vite-plus/pull/663
-- **Trace sources**: 73 trace files across 9 projects (E2E run #22552050124)
-  - frm-stack: 20 files (10 global CLI + 10 NAPI)
-  - vibe-dashboard: 8 files (6 global CLI + 2 empty)
-  - rollipop: 8 files (4 global CLI + 4 NAPI)
-  - tanstack-start-helloworld: 10 files (4 global CLI + 4 NAPI + 2 empty)
-  - vite-vue-vercel: 10 files (4 global CLI + 4 NAPI + 2 empty)
-  - dify: 10 files (4 global CLI + 4 NAPI + 1 empty + 1 corrupted)
-  - oxlint-plugin-complexity: 2 files (1 global CLI + 1 NAPI)
-  - vitepress: 3 files (1 global CLI + 1 NAPI + 1 empty)
-  - vue-mini: 2 files (1 global CLI + 1 NAPI)
+- **E2E tests**:
+  - Run #22556278251 — 2 runs per project, cache disabled. Baseline overhead measurements.
+  - Run #22558467033 — 3 runs per project (first, cache hit, cache miss). Cache performance measurements.
+- **Analysis tools**:
+  - `analyze2.py` — Parses Chrome trace JSON files, classifies cache behavior, extracts per-span timings
+  - Trace artifacts: `run2-artifacts/trace-{project}-ubuntu-latest/`
+  - Full CI log: `run2-full.log`
