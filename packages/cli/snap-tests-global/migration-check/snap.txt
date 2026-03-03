@@ -1,21 +1,23 @@
 > vp migrate --help # show help
 VITE+ - The Unified Toolchain for the Web
 
-Usage: vp migrate [PATH] [OPTIONS]
+USAGE: vp migrate [PATH] [OPTIONS]
 
 Migrate standalone Vite, Vitest, Oxlint, and Oxfmt projects to unified Vite+.
 
-Arguments:
-  PATH  Target directory to migrate (default: current directory)
+ARGUMENTS:
+  PATH                       Target directory to migrate (default: current directory)
 
-Options:
-  --agent NAME       Write agent instructions file into the project (e.g. chatgpt, claude, opencode).
-  --no-agent         Skip writing agent instructions file
-  --no-interactive   Run in non-interactive mode (skip prompts and use defaults)
-  --non-interactive  Alias for --no-interactive
-  -h, --help         Show this help message
+OPTIONS:
+  --agent NAME               Write agent instructions file into the project (e.g. chatgpt, claude, opencode).
+  --no-agent                 Skip writing agent instructions file
+  --hooks                    Set up pre-commit hooks (default in non-interactive mode)
+  --no-hooks                 Skip pre-commit hooks setup
+  --no-interactive           Run in non-interactive mode (skip prompts and use defaults)
+  --non-interactive          Alias for --no-interactive
+  -h, --help                 Show this help message
 
-Examples:
+EXAMPLES:
   # Migrate current package
   vp migrate
 
@@ -24,4 +26,5 @@ Examples:
 
   # Non-interactive mode
   vp migrate --no-interactive
+
 
