@@ -21,6 +21,7 @@ import { displayRelative } from '../utils/path.js';
 import {
   defaultInteractive,
   downloadPackageManager,
+  promptGitHooks,
   runViteInstall,
   selectPackageManager,
 } from '../utils/prompts.js';
@@ -70,7 +71,10 @@ const helpMessage = renderCliDoc({
           label: '--agent NAME',
           description: 'Create an agent instructions file for the specified agent.',
         },
-        { label: '--hooks', description: 'Set up pre-commit hooks (default in non-interactive mode)' },
+        {
+          label: '--hooks',
+          description: 'Set up pre-commit hooks (default in non-interactive mode)',
+        },
         { label: '--no-hooks', description: 'Skip pre-commit hooks setup' },
         { label: '--no-interactive', description: 'Run in non-interactive mode' },
         { label: '--list', description: 'List all available templates' },
@@ -692,27 +696,6 @@ function showNextSteps(projectDir: string, isMonorepo: boolean) {
 async function showAvailableTemplates() {
   log((await getVitePlusHeader()) + '\n');
   log(listTemplatesMessage);
-}
-
-async function promptGitHooks(options: Options): Promise<boolean> {
-  if (options.hooks === false) {
-    return false;
-  }
-  if (options.hooks === true) {
-    return true;
-  }
-  if (options.interactive) {
-    const selected = await prompts.confirm({
-      message: 'Set up pre-commit hooks to run format, lint, and type checks with auto-fix?',
-      initialValue: true,
-    });
-    if (prompts.isCancel(selected)) {
-      cancelAndExit();
-      return false;
-    }
-    return selected;
-  }
-  return true; // non-interactive default
 }
 
 main().catch((err) => {
