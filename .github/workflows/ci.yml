@@ -24,7 +24,7 @@ defaults:
 
 jobs:
   detect-changes:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
       pull-requests: read
@@ -42,7 +42,7 @@ jobs:
   download-previous-rolldown-binaries:
     needs: detect-changes
     if: needs.detect-changes.outputs.code-changed == 'true'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
       packages: read
@@ -59,9 +59,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: blacksmith-4vcpu-ubuntu-2404
             target: x86_64-unknown-linux-gnu
-          - os: windows-latest
+          - os: blacksmith-4vcpu-windows-2022
             target: x86_64-pc-windows-msvc
           - os: namespace-profile-mac-default
             target: aarch64-apple-darwin
@@ -76,7 +76,7 @@ jobs:
           cache-key: test
 
       - run: rustup target add x86_64-unknown-linux-musl
-        if: ${{ matrix.os == 'ubuntu-latest' }}
+        if: ${{ runner.os == 'Linux' }}
 
       - name: Configure Git for access to vite-task
         run: git config --global url."https://x-access-token:${{ secrets.VITE_TASK_TOKEN }}@github.com/".insteadOf "ssh://git@github.com/"
@@ -92,7 +92,7 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.code-changed == 'true'
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - uses: ./.github/actions/clone
@@ -124,7 +124,7 @@ jobs:
 
   run:
     name: Run task
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs:
       - download-previous-rolldown-binaries
     steps:
@@ -175,9 +175,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: blacksmith-4vcpu-ubuntu-2404
           - os: namespace-profile-mac-default
-          - os: windows-latest
+          - os: blacksmith-4vcpu-windows-2022
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -190,7 +190,7 @@ jobs:
           brew install rustup
           rustup install stable
           echo "PATH=/opt/homebrew/opt/rustup/bin:$PATH" >> $GITHUB_ENV
-        if: ${{ matrix.os == 'namespace-profile-mac-default' }}
+        if: ${{ runner.os == 'macOS' }}
 
       - uses: oxc-project/setup-rust@d286d43bc1f606abbd98096666ff8be68c8d5f57 # v1.0.0
         with:
@@ -208,7 +208,7 @@ jobs:
       - name: Build with upstream
         uses: ./.github/actions/build-upstream
         with:
-          target: ${{ matrix.os == 'ubuntu-latest' && 'x86_64-unknown-linux-gnu' ||  matrix.os == 'windows-latest' && 'x86_64-pc-windows-msvc' || 'aarch64-apple-darwin' }}
+          target: ${{ runner.os == 'Linux' && 'x86_64-unknown-linux-gnu' || runner.os == 'Windows' && 'x86_64-pc-windows-msvc' || 'aarch64-apple-darwin' }}
 
       - name: Build CLI
         run: |
@@ -221,7 +221,7 @@ jobs:
           fi
 
       - name: Check TypeScript types
-        if: ${{ matrix.os == 'ubuntu-latest' }}
+        if: ${{ runner.os == 'Linux' }}
         run: pnpm tsgo
 
       - name: Verify CLI installation
@@ -234,7 +234,7 @@ jobs:
         run: vp check
 
       - name: Test global package install (powershell)
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         run: |
           echo "PATH: $env:Path"
@@ -274,7 +274,7 @@ jobs:
           node --version
 
       - name: Test global package install (cmd)
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: ${{ runner.os == 'Windows' }}
         shell: cmd
         run: |
           echo "PATH: %PATH%"
@@ -417,7 +417,7 @@ jobs:
           fi
 
       - name: Test upgrade (powershell)
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         run: |
           Get-ChildItem "$env:USERPROFILE\.vite-plus\"
@@ -463,7 +463,7 @@ jobs:
           }
 
       - name: Test upgrade (cmd)
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: ${{ runner.os == 'Windows' }}
         shell: cmd
         run: |
           REM Save initial (dev build) version
@@ -505,7 +505,7 @@ jobs:
     name: Local CLI `vp install` E2E test
     needs:
       - download-previous-rolldown-binaries
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     # Run if: not a PR, OR PR has 'test: install-e2e' label
     if: >-
       github.event_name != 'pull_request' ||
@@ -574,7 +574,7 @@ jobs:
           done
 
   done:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: always()
     needs:
       - test

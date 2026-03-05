@@ -21,7 +21,7 @@ env:
 
 jobs:
   prepare:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
     outputs:
@@ -47,13 +47,13 @@ jobs:
           - target: x86_64-apple-darwin
             os: namespace-profile-mac-default
           - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: blacksmith-4vcpu-ubuntu-2404
           - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: blacksmith-4vcpu-ubuntu-2404
           - target: x86_64-pc-windows-msvc
-            os: windows-latest
+            os: blacksmith-4vcpu-windows-2022
           - target: aarch64-pc-windows-msvc
-            os: windows-latest
+            os: blacksmith-4vcpu-windows-2022
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - uses: ./.github/actions/clone
@@ -119,7 +119,7 @@ jobs:
           if-no-files-found: error
 
   Release:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [prepare, build-rust]
     permissions:
       contents: write

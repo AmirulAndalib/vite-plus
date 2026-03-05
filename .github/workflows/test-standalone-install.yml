@@ -31,7 +31,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: blacksmith-4vcpu-ubuntu-2404
             name: Linux x64 glibc
           - os: macos-15-intel
             name: macOS x64
@@ -116,7 +116,7 @@ jobs:
 
   test-install-sh-arm64:
     name: Test install.sh (Linux ARM64 glibc via QEMU)
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
     steps:
@@ -180,7 +180,7 @@ jobs:
 
   test-install-ps1-v5:
     name: Test install.ps1 (Windows x64, PowerShell 5.1)
-    runs-on: windows-latest
+    runs-on: blacksmith-4vcpu-windows-2022
     permissions:
       contents: read
     steps:
@@ -323,7 +323,7 @@ jobs:
 
   test-install-ps1:
     name: Test install.ps1 (Windows x64)
-    runs-on: windows-latest
+    runs-on: blacksmith-4vcpu-windows-2022
     permissions:
       contents: read
     steps:

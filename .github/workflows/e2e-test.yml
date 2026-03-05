@@ -25,7 +25,7 @@ defaults:
 
 jobs:
   detect-changes:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
       pull-requests: read
@@ -44,7 +44,7 @@ jobs:
 
   download-previous-rolldown-binaries:
     needs: detect-changes
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     # Run if: not a PR, OR PR has 'test: e2e' label, OR PR is from deps/upstream-update branch, OR build.ts files changed
     if: >-
       github.event_name != 'pull_request' ||
@@ -72,9 +72,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: blacksmith-4vcpu-ubuntu-2404
             target: x86_64-unknown-linux-gnu
-          - os: windows-latest
+          - os: blacksmith-4vcpu-windows-2022
             target: x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -134,8 +134,8 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-latest
-          - windows-latest
+          - blacksmith-4vcpu-ubuntu-2404
+          - blacksmith-4vcpu-windows-2022
         project:
           - name: vibe-dashboard
             node-version: 24
@@ -244,11 +244,11 @@ jobs:
               vp run test navigation-utils.test.ts real-browser-flicker.test.tsx workflow-parallel-limit.test.tsx
         exclude:
           # frm-stack uses Docker (testcontainers) which doesn't work the same way on Windows
-          - os: windows-latest
+          - os: blacksmith-4vcpu-windows-2022
             project:
               name: frm-stack
           # dify only runs on Linux for now
-          - os: windows-latest
+          - os: blacksmith-4vcpu-windows-2022
             project:
               name: dify
 
@@ -291,7 +291,7 @@ jobs:
 
   notify-failure:
     name: Notify on failure
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: e2e-test
     if: ${{ failure() && github.event_name == 'schedule' }}
     permissions:
