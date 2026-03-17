@@ -67,6 +67,8 @@ describe('expandCreateShorthand', () => {
   it('should handle special cases where default convention does not apply', () => {
     expect(expandCreateShorthand('nitro')).toBe('create-nitro-app');
     expect(expandCreateShorthand('nitro@latest')).toBe('create-nitro-app@latest');
+    expect(expandCreateShorthand('svelte')).toBe('sv');
+    expect(expandCreateShorthand('svelte@latest')).toBe('sv@latest');
   });
 });
 
