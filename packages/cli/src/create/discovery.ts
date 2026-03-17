@@ -198,6 +198,9 @@ export function expandCreateShorthand(templateName: string): string {
   if (name === 'nitro') {
     return `create-nitro-app${version}`;
   }
+  if (name === 'svelte') {
+    return `sv${version}`;
+  }
 
   return `create-${name}${version}`;
 }
