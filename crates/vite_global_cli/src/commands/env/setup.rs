@@ -79,6 +79,12 @@ pub async fn execute(refresh: bool, env_only: bool) -> Result<ExitStatus, Error>
         }
     }
 
+    // Best-effort cleanup of .old files from rename-before-copy on Windows
+    #[cfg(windows)]
+    if refresh {
+        cleanup_old_files(&bin_dir).await;
+    }
+
     // Print results
     if !created.is_empty() {
         println!("{}", help::render_heading("Created Shims"));
@@ -142,15 +148,7 @@ async fn setup_vp_wrapper(bin_dir: &vite_path::AbsolutePath, refresh: bool) -> R
             // that launched us). Windows prevents overwriting a running exe, so we
             // rename it to a timestamped .old file first, then copy the new one.
             if tokio::fs::try_exists(&bin_vp_exe).await.unwrap_or(false) {
-                let timestamp = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_secs();
-                let old_name = format!("vp.exe.{timestamp}.old");
-                let old_path = bin_dir.join(&old_name);
-                if let Err(e) = tokio::fs::rename(&bin_vp_exe, &old_path).await {
-                    tracing::warn!("Failed to rename running vp.exe to {}: {}", old_name, e);
-                }
+                rename_to_old(&bin_vp_exe).await;
             }
 
             tokio::fs::copy(trampoline_src.as_path(), &bin_vp_exe).await?;
@@ -194,8 +192,15 @@ async fn create_shim(
         if !refresh {
             return Ok(false);
         }
-        // Remove existing shim for refresh
-        tokio::fs::remove_file(&shim_path).await?;
+        // Remove existing shim for refresh.
+        // On Windows, .exe files may be locked (by antivirus, indexer, or
+        // still-running processes), so rename to .old first instead of deleting.
+        #[cfg(windows)]
+        rename_to_old(&shim_path).await;
+        #[cfg(not(windows))]
+        {
+            tokio::fs::remove_file(&shim_path).await?;
+        }
     }
 
     #[cfg(unix)]
@@ -302,6 +307,25 @@ pub(crate) fn get_trampoline_path() -> Result<vite_path::AbsolutePathBuf, Error>
 
     vite_path::AbsolutePathBuf::new(trampoline)
         .ok_or_else(|| Error::ConfigError("Invalid trampoline path".into()))
+}
+
+/// Rename an existing `.exe` to a timestamped `.old` file instead of deleting.
+///
+/// On Windows, running `.exe` files can't be deleted or overwritten, but they can
+/// be renamed. The `.old` files are cleaned up by `cleanup_old_files()`.
+#[cfg(windows)]
+async fn rename_to_old(path: &vite_path::AbsolutePath) {
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    if let Some(name) = path.as_path().file_name().and_then(|n| n.to_str()) {
+        let old_name = format!("{name}.{timestamp}.old");
+        let old_path = path.as_path().with_file_name(&old_name);
+        if let Err(e) = tokio::fs::rename(path, &old_path).await {
+            tracing::warn!("Failed to rename {} to {}: {}", name, old_name, e);
+        }
+    }
 }
 
 /// Best-effort cleanup of accumulated `.old` files from previous rename-before-copy operations.
