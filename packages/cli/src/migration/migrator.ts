@@ -679,7 +679,7 @@ export function rewriteStandaloneProject(
         ...pkg.resolutions,
         ...VITE_PLUS_OVERRIDE_PACKAGES,
       };
-    } else if (packageManager === PackageManager.npm) {
+    } else if (packageManager === PackageManager.npm || packageManager === PackageManager.bun) {
       pkg.overrides = {
         ...pkg.overrides,
         ...VITE_PLUS_OVERRIDE_PACKAGES,
@@ -976,7 +976,7 @@ function rewriteRootWorkspacePackageJson(
         // https://github.com/yarnpkg/berry/issues/6979
         ...VITE_PLUS_OVERRIDE_PACKAGES,
       };
-    } else if (packageManager === PackageManager.npm) {
+    } else if (packageManager === PackageManager.npm || packageManager === PackageManager.bun) {
       pkg.overrides = {
         ...pkg.overrides,
         ...VITE_PLUS_OVERRIDE_PACKAGES,
@@ -1078,7 +1078,8 @@ export function rewritePackageJson(
     const updated = rewriteScripts(JSON.stringify(config), readRulesYaml());
     extractedStagedConfig = updated ? JSON.parse(updated) : config;
   }
-  const supportCatalog = isMonorepo && packageManager !== PackageManager.npm;
+  const supportCatalog =
+    isMonorepo && packageManager !== PackageManager.npm && packageManager !== PackageManager.bun;
   let needVitePlus = false;
   for (const [key, version] of Object.entries(VITE_PLUS_OVERRIDE_PACKAGES)) {
     const value = supportCatalog && !version.startsWith('file:') ? 'catalog:' : version;
