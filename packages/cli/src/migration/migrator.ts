@@ -992,6 +992,7 @@ function rewriteRootWorkspacePackageJson(
           overrides: {
             ...pkg.pnpm?.overrides,
             ...VITE_PLUS_OVERRIDE_PACKAGES,
+            [VITE_PLUS_NAME]: VITE_PLUS_VERSION,
           },
         };
       } else {
