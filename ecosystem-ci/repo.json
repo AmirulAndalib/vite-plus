@@ -65,5 +65,11 @@
     "repository": "https://github.com/kazupon/vp-config.git",
     "branch": "main",
     "hash": "b58c48d71a17c25dec71a003535e6312791ce2aa"
+  },
+  "vinext": {
+    "repository": "https://github.com/cloudflare/vinext.git",
+    "branch": "main",
+    "hash": "f78dd2b39f5b02242417e0a684b1f2f55d3dbdff",
+    "forceFreshMigration": true
   }
 }

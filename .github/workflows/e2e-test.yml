@@ -257,6 +257,12 @@ jobs:
               vp check
               vp pack
               vp test
+          - name: vinext
+            node-version: 24
+            command: |
+              vp run build
+              vp run check
+              vp run test
         exclude:
           # frm-stack uses Docker (testcontainers) which doesn't work the same way on Windows
           - os: windows-latest
@@ -266,6 +272,10 @@ jobs:
           - os: windows-latest
             project:
               name: dify
+          # vinext uses workerd native deps that don't build on Windows
+          - os: windows-latest
+            project:
+              name: vinext
 
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
