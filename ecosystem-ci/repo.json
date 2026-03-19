@@ -79,5 +79,11 @@
     "branch": "main",
     "hash": "f4e2d05f25539ba64a97368f6e35b33b2a7bed05",
     "forceFreshMigration": true
+  },
+  "yaak": {
+    "repository": "https://github.com/mountain-loop/yaak.git",
+    "branch": "main",
+    "hash": "b4a1c418bb3f923858dd55729f585e189327a038",
+    "forceFreshMigration": true
   }
 }

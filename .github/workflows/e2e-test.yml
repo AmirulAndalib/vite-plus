@@ -271,6 +271,12 @@ jobs:
               vp lint --type-aware
               vp build
               vp test
+          - name: yaak
+            node-version: 24
+            command: |
+              vp fmt --ignore-path .oxfmtignore
+              vp lint
+              vp test
         exclude:
           # frm-stack uses Docker (testcontainers) which doesn't work the same way on Windows
           - os: windows-latest
@@ -284,6 +290,10 @@ jobs:
           - os: windows-latest
             project:
               name: vinext
+          # yaak is a Tauri app with Rust/wasm deps
+          - os: windows-latest
+            project:
+              name: yaak
 
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
