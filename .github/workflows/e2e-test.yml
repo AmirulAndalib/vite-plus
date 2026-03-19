@@ -278,6 +278,13 @@ jobs:
               # FIXME: type-aware lint fails with "Invalid tsconfig" without full Rust/wasm bootstrap
               vp lint || true
               vp test
+          - name: npmx.dev
+            node-version: 24
+            command: |
+              vp fmt
+              vp run lint
+              vp run test:types
+              vp test --project unit
         exclude:
           # frm-stack uses Docker (testcontainers) which doesn't work the same way on Windows
           - os: windows-latest
@@ -295,6 +302,10 @@ jobs:
           - os: windows-latest
             project:
               name: yaak
+          # npmx.dev is a Nuxt app, ubuntu-only for now
+          - os: windows-latest
+            project:
+              name: npmx.dev
 
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1

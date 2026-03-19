@@ -85,5 +85,11 @@
     "branch": "main",
     "hash": "b4a1c418bb3f923858dd55729f585e189327a038",
     "forceFreshMigration": true
+  },
+  "npmx.dev": {
+    "repository": "https://github.com/npmx-dev/npmx.dev.git",
+    "branch": "main",
+    "hash": "230b7c7ddb6bb8551ce797144f0ce0f047ff8d7d",
+    "forceFreshMigration": true
   }
 }
