@@ -39,14 +39,12 @@ if (forceFreshMigration) {
   const pkg = JSON.parse(await readFile(pkgPath, 'utf-8'));
   delete pkg.devDependencies?.['vite-plus'];
   delete pkg.dependencies?.['vite-plus'];
+
   await writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf-8');
 
-  // Update pnpm-workspace.yaml overrides to redirect vite-plus packages to tgz files.
-  // Projects using pnpm catalogs (e.g. vinext) have entries like:
-  //   catalog: { vite: "npm:@voidzero-dev/vite-plus-core@...", ... }
-  //   overrides: { vite: "catalog:", vitest: "catalog:" }
-  // Catalog doesn't support file: protocol, so we set overrides directly to tgz
-  // paths. pnpm overrides take precedence over catalog entries.
+  // Also update pnpm-workspace.yaml overrides for projects that don't have
+  // pnpm.overrides in package.json (pnpm-workspace.yaml overrides are only
+  // used when package.json has no overrides).
   const workspaceYamlPath = join(cwd, 'pnpm-workspace.yaml');
   if (existsSync(workspaceYamlPath)) {
     const yaml = await readFile(workspaceYamlPath, 'utf-8');
@@ -58,7 +56,6 @@ if (forceFreshMigration) {
       if (/^overrides:\s*$/.test(line)) {
         inOverrides = true;
         result.push('overrides:');
-        // Replace entire overrides section with tgz paths
         for (const [name, value] of Object.entries(tgzPaths)) {
           const yamlKey = name.includes('@') ? `"${name}"` : name;
           result.push(`  ${yamlKey}: ${value}`);
@@ -66,7 +63,6 @@ if (forceFreshMigration) {
         continue;
       }
       if (inOverrides) {
-        // Skip existing override entries (2-space indented lines)
         if (line.startsWith('  ')) {
           continue;
         }
@@ -75,7 +71,6 @@ if (forceFreshMigration) {
       result.push(line);
     }
 
-    // If no overrides section existed, append one
     if (!inOverrides && !result.some((l) => l.startsWith('overrides:'))) {
       result.push('overrides:');
       for (const [name, value] of Object.entries(tgzPaths)) {
@@ -111,3 +106,21 @@ execSync(`${cli} migrate --no-agent --no-interactive`, {
     VITE_PLUS_VERSION: tgzPaths['vite-plus'],
   },
 });
+
+// Post-migration: ensure tgz overrides are set in pnpm.overrides in package.json.
+// vp migrate may overwrite overrides set before migration, and pnpm ignores
+// pnpm-workspace.yaml overrides when pnpm.overrides exists in package.json.
+if (forceFreshMigration) {
+  const pkgPath = join(cwd, 'package.json');
+  const pkg = JSON.parse(await readFile(pkgPath, 'utf-8'));
+  if (!pkg.pnpm) {
+    pkg.pnpm = {};
+  }
+  if (!pkg.pnpm.overrides) {
+    pkg.pnpm.overrides = {};
+  }
+  for (const [name, value] of Object.entries(tgzPaths)) {
+    pkg.pnpm.overrides[name] = value;
+  }
+  await writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf-8');
+}
