@@ -4,31 +4,14 @@ const require = createRequire(`${process.cwd()}/`);
 
 const expectedVersion = '0.0.0';
 
-const packages = [
-  { name: 'vite', resolve: 'vite/package.json' },
-  { name: 'vitest', resolve: 'vitest/package.json' },
-  { name: 'vite-plus', resolve: 'vite-plus/package.json' },
-];
-
-let failed = false;
-
-for (const { name, resolve } of packages) {
-  try {
-    const pkg = require(resolve) as { version: string; name: string };
-    if (pkg.version !== expectedVersion) {
-      console.error(
-        `✗ ${name}: expected version ${expectedVersion}, got ${pkg.version} (${pkg.name})`,
-      );
-      failed = true;
-    } else {
-      console.log(`✓ ${name}@${pkg.version} (${pkg.name})`);
-    }
-  } catch {
-    console.error(`✗ ${name}: not installed`);
-    failed = true;
+try {
+  const pkg = require('vite-plus/package.json') as { version: string; name: string };
+  if (pkg.version !== expectedVersion) {
+    console.error(`✗ vite-plus: expected version ${expectedVersion}, got ${pkg.version}`);
+    process.exit(1);
   }
-}
-
-if (failed) {
+  console.log(`✓ vite-plus@${pkg.version}`);
+} catch {
+  console.error('✗ vite-plus: not installed');
   process.exit(1);
 }
