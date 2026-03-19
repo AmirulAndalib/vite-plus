@@ -261,6 +261,7 @@ jobs:
             node-version: 24
             command: |
               vp run build
+              vp check --fix
               vp run check
               vp run test
         exclude:
