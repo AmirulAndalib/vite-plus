@@ -322,9 +322,6 @@ importers:
       vitest:
         specifier: workspace:@voidzero-dev/vite-plus-test@*
         version: link:packages/test
-      yaml:
-        specifier: 'catalog:'
-        version: 2.8.2
       zod:
         specifier: 'catalog:'
         version: 4.3.5

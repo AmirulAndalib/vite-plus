@@ -34,7 +34,6 @@
     "vite": "catalog:",
     "vite-plus": "workspace:*",
     "vitest": "catalog:",
-    "yaml": "catalog:",
     "zod": "catalog:"
   },
   "lint-staged": {

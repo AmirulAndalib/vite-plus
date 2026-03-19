@@ -3,8 +3,6 @@ import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import YAML from 'yaml';
-
 import { ecosystemCiDir, tgzDir } from './paths.ts';
 import repos from './repo.json' with { type: 'json' };
 
@@ -51,16 +49,42 @@ if (forceFreshMigration) {
   // paths. pnpm overrides take precedence over catalog entries.
   const workspaceYamlPath = join(cwd, 'pnpm-workspace.yaml');
   if (existsSync(workspaceYamlPath)) {
-    const doc = YAML.parseDocument(await readFile(workspaceYamlPath, 'utf-8'));
-    let overrides = doc.get('overrides') as YAML.YAMLMap | undefined;
-    if (!overrides) {
-      overrides = new YAML.YAMLMap();
-      doc.set('overrides', overrides);
+    const yaml = await readFile(workspaceYamlPath, 'utf-8');
+    const lines = yaml.split('\n');
+    const result: string[] = [];
+    let inOverrides = false;
+
+    for (const line of lines) {
+      if (/^overrides:\s*$/.test(line)) {
+        inOverrides = true;
+        result.push('overrides:');
+        // Replace entire overrides section with tgz paths
+        for (const [name, value] of Object.entries(tgzPaths)) {
+          const yamlKey = name.includes('@') ? `"${name}"` : name;
+          result.push(`  ${yamlKey}: ${value}`);
+        }
+        continue;
+      }
+      if (inOverrides) {
+        // Skip existing override entries (2-space indented lines)
+        if (line.startsWith('  ')) {
+          continue;
+        }
+        inOverrides = false;
+      }
+      result.push(line);
     }
-    for (const [name, value] of Object.entries(tgzPaths)) {
-      overrides.set(name, value);
+
+    // If no overrides section existed, append one
+    if (!inOverrides && !result.some((l) => l.startsWith('overrides:'))) {
+      result.push('overrides:');
+      for (const [name, value] of Object.entries(tgzPaths)) {
+        const yamlKey = name.includes('@') ? `"${name}"` : name;
+        result.push(`  ${yamlKey}: ${value}`);
+      }
     }
-    await writeFile(workspaceYamlPath, doc.toString(), 'utf-8');
+
+    await writeFile(workspaceYamlPath, result.join('\n'), 'utf-8');
   }
 }
 
