@@ -605,6 +605,10 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let scripts_dir = AbsolutePathBuf::new(temp_dir.path().to_path_buf()).unwrap();
 
+        // Keep this delegation test independent of the moving latest-LTS alias.
+        // The unofficial musl index can advertise a release before its archive exists.
+        tokio::fs::write(temp_dir.path().join(".node-version"), "22.13.1\n").await.unwrap();
+
         // Create a bin.js that prints process.version
         let script_path = temp_dir.path().join("bin.js");
         let mut file = std::fs::File::create(&script_path).unwrap();
