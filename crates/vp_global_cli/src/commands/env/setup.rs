@@ -17,6 +17,9 @@
 
 use std::process::ExitStatus;
 
+#[cfg(windows)]
+use indoc::formatdoc;
+
 use crate::{error::Error, help};
 
 /// Shells that get a generated `<CONFIG>/env.*` setup script.
@@ -733,11 +736,26 @@ fn vp_use_cmd_content(config: &vp_shared::EnvConfig) -> String {
     let mut exports: Vec<_> = config.dir_envs.iter().collect();
     exports.sort_unstable_by_key(|(name, _)| *name);
     let export_lines: String =
-        exports.into_iter().map(|(name, value)| format!("set {name}={value}\r\n")).collect();
-    format!(
-        "@echo off\r\nset VP_ENV_USE_EVAL_ENABLE=1\r\n{export_lines}for /f \"delims=\" %%i in ('\"{}\" env use %*') do %%i\r\nset VP_ENV_USE_EVAL_ENABLE=\r\n",
-        vp_exe.as_path().display()
-    )
+        exports.into_iter().map(|(name, value)| format!("set {name}={value}\n")).collect();
+    formatdoc! {
+        r#"
+        @echo off
+        setlocal
+        set VP_ENV_USE_EVAL_ENABLE=1
+        set VP_SHELL=cmd
+        {export_lines}set "__VP_USE_OUT=%TEMP%\vp-use-%RANDOM%-%RANDOM%.tmp"
+        "{vp_exe}" env use %* > "%__VP_USE_OUT%"
+        set "__VP_USE_STATUS=%ERRORLEVEL%"
+        endlocal & set "__VP_USE_OUT=%__VP_USE_OUT%" & set "__VP_USE_STATUS=%__VP_USE_STATUS%"
+        {export_lines}if "%__VP_USE_STATUS%"=="0" for /f "usebackq delims=" %%i in ("%__VP_USE_OUT%") do %%i
+        del /q "%__VP_USE_OUT%" >nul 2>&1
+        set "__VP_USE_OUT="
+        set "__VP_USE_STATUS=" & exit /b %__VP_USE_STATUS%
+        "#,
+        vp_exe = vp_exe.as_path().display(),
+        export_lines = export_lines
+    }
+    .replace('\n', "\r\n")
 }
 
 fn render_home_relative_path(path: &std::path::Path, home_dir: &std::path::Path) -> String {
@@ -1584,6 +1602,12 @@ mod tests {
                 assert!(
                     cmd_content.contains(&format!("\"{}\" env use %*", expected_exe.display())),
                     "vp-use.cmd should invoke the install-local vp.exe, got: {cmd_content}"
+                );
+                assert!(cmd_content.contains("setlocal\r\n"));
+                assert!(cmd_content.contains("set VP_SHELL=cmd\r\n"));
+                assert!(
+                    cmd_content.contains("exit /b %__VP_USE_STATUS%"),
+                    "vp-use.cmd should preserve the vp env use exit status"
                 );
             },
         )
