@@ -1,8 +1,26 @@
-# RFC: `vp env` - Shim-Based Node Version Management
+# RFC: `vp env` - Unified JavaScript Environment Management
 
 ## Summary
 
-This RFC proposes adding a `vp env` command that provides system-wide, IDE-safe Node.js version management through a shim-based architecture. The shims intercept `node`, `npm`, and `npx` commands, automatically resolving and executing the correct Node.js version based on project configuration.
+This RFC defines system-wide, IDE-safe Node.js and package-manager management through a shim-based architecture. The environment contains one Node.js runtime and one selected package manager; npm, pnpm, Yarn, and Bun remain independently callable families.
+
+## Breaking revision: unified environments
+
+The original Node.js-only command model was extended as a breaking change. Bare component-wide commands now operate on Node.js and package managers together, while unqualified version arguments remain Node.js for compatibility:
+
+```bash
+vp env pin 22.0.0               # Node.js only (legacy-compatible)
+vp env pin pnpm@10.18.0         # Package manager only
+vp env pin 22.0.0 pnpm@10.18.0  # Both
+```
+
+Selectors are `node`, `pm`, `npm`, `pnpm`, `yarn`, and `bun`. `pm` selects every family for listing and cleanup, but the single project-selected manager for `current`, `pin`, `unpin`, `use`, and execution.
+
+Node and package-manager modes persist independently. `nodeShimMode` stores the Node mode and accepts the legacy `shimMode` field while reading older configurations. Missing package-manager modes default to managed without inheriting Node state, and only package-manager mode commands or first-use choices persist them.
+
+Package-manager resolution priority is explicit override, `VP_PACKAGE_MANAGER` or `.session-package-manager`, top-level `packageManager`, `devEngines.packageManager`, lockfile/config detection, `defaultPackageManager`, then the existing fallback. The resolver is non-mutating and shared by env inspection, shims, `vp install`, `use`, and `exec`.
+
+The JSON contracts for `current`, `list`, and `list-remote` are intentionally breaking. `current` exposes `node` and `package_manager` objects. Local and remote lists expose `node` plus a `package_managers` object keyed by family. Scoped calls omit unselected fields, and multi-registry remote listing emits no partial output on failure.
 
 ## Motivation
 
@@ -438,7 +456,12 @@ VP_HOME/                              # Default: ~/.vite-plus
   // Set via: vp env on (managed) or vp env off (system_first)
   // - "managed" (default): All vp commands and shims use vite-plus managed Node.js
   // - "system_first": All vp commands and shims prefer system Node.js, fallback to managed if not found
-  "shimMode": "managed"
+  "nodeShimMode": "managed",
+
+  // `shimMode` is accepted as the legacy Node.js field name but is no longer written.
+  "packageManagerShimModes": {
+    "pnpm": "managed"
+  }
 }
 ```
 
@@ -846,7 +869,7 @@ Installation
   ✓ Shims             node, npm, npx
 
 Configuration
-  ✓ Node.js mode      managed
+  ✓ Node.js           managed mode
 
 PATH
   ✗ vp                not in PATH
@@ -944,7 +967,7 @@ Installation
   ✓ Shims             node, npm, npx
 
 Configuration
-  ✓ Node.js mode      managed
+  ✓ Node.js           managed mode
   ✓ IDE integration   env sourced in ~/.zshenv
 
 PATH
@@ -969,7 +992,7 @@ $ vp env doctor
 ...
 
 Configuration
-  ✓ Node.js mode      managed
+  ✓ Node.js           managed mode
   ✓ IDE integration   env sourced in ~/.zshenv
   ⚠ Session override  VP_NODE_VERSION=20.18.0
                       Overrides all file-based resolution.
@@ -987,7 +1010,7 @@ $ vp env doctor
 ...
 
 Configuration
-  ✓ Node.js mode      system-first
+  ✓ Node.js           system-first mode
     System Node.js    /usr/local/bin/node
   ✓ IDE integration   env sourced in ~/.zshenv
 
@@ -1009,7 +1032,7 @@ $ vp env doctor
 ...
 
 Configuration
-  ✓ Node.js mode      system-first
+  ✓ Node.js           system-first mode
   ⚠ System Node.js    not found (will fall back to managed)
 
 ...
@@ -1026,7 +1049,7 @@ Installation
                       Run 'vp env setup' to create bin directory and shims.
 
 Configuration
-  ✓ Node.js mode      managed
+  ✓ Node.js           managed mode
 
 PATH
   ✗ vp                not in PATH

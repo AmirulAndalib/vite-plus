@@ -5,9 +5,8 @@
 //! 2. Node.js installation (if needed)
 //! 3. Tool execution (core shims and package binaries)
 
-use vp_pm_cli::{
-    PackageManagerType, ensure_package_manager_bin, resolve_package_manager_from_package_json,
-};
+use dialoguer::{Select, theme::ColorfulTheme};
+use vp_pm_cli::{PackageManagerType, ensure_package_manager_bin};
 use vp_shared::{PrependOptions, env_vars, output, prepend_to_path_env};
 use vt_path::{AbsolutePath, AbsolutePathBuf, current_dir};
 
@@ -20,6 +19,7 @@ use crate::{
         env::{
             bin_config::{BinConfig, BinSource},
             config::{self, ShimMode},
+            package_manager,
             package_metadata::PackageMetadata,
         },
         global::install::is_protected_shim,
@@ -254,7 +254,7 @@ fn check_npm_global_install_result(
             // the user for non-core names: npm installed the package, but the
             // binary stays unlinked.
             if is_protected_shim(&bin_name, false) {
-                if !crate::commands::global::CORE_SHIMS.contains(&bin_name.as_str()) {
+                if bin_name != "vp" && !crate::shim::is_core_shim_tool(&bin_name) {
                     output::note(&vt_str::format!(
                         "'{bin_name}' is a Vite+ default shim; the npm-installed copy is not \
                          linked."
@@ -660,12 +660,11 @@ async fn resolve_package_manager_tool(
         return Ok(None);
     };
 
-    let (version, hash) = match resolve_package_manager_from_package_json(cwd)? {
-        Some(resolution) if resolution.package_manager_type == expected_type => {
-            (resolution.version, resolution.hash)
-        }
-        Some(_) | None if expected_type == PackageManagerType::Npm => return Ok(None),
-        Some(_) | None => ("latest".into(), None),
+    let resolution = package_manager::resolve_current_for(cwd, Some(expected_type)).await?;
+    let (version, hash) = match resolution {
+        Some(resolution) => (resolution.version, resolution.hash),
+        None if expected_type == PackageManagerType::Npm => return Ok(None),
+        None => ("latest".into(), None),
     };
 
     let bin_name = expected_type.bin_name_for_tool(tool);
@@ -737,11 +736,17 @@ pub async fn dispatch(tool: &str, args: &[String]) -> i32 {
     }
 
     // Check shim mode from config
-    let shim_mode = load_shim_mode().await;
+    let shim_mode = load_shim_mode(tool).await;
     if shim_mode == ShimMode::SystemFirst {
         tracing::debug!("system-first mode enabled");
         // In system-first mode, try to find system tool first
         if let Some(system_path) = find_system_tool(tool) {
+            if PackageManagerType::from_tool(tool).is_some()
+                && let Err(error) = prepare_node_path_for_system_package_manager().await
+            {
+                eprintln!("vp: Failed to prepare Node.js for system package manager: {error}");
+                return 1;
+            }
             // Append current bin_dir to VP_BYPASS to prevent infinite loops
             // when multiple vite-plus installations exist in PATH.
             // The next installation will filter all accumulated paths.
@@ -779,24 +784,45 @@ pub async fn dispatch(tool: &str, args: &[String]) -> i32 {
         }
     };
 
-    // Resolve version (with caching)
-    let resolution = match resolve_with_cache(&cwd).await {
-        Ok(r) => r,
-        Err(e) => {
-            eprintln!("vp: Failed to resolve Node version: {e}");
-            eprintln!("vp: Run 'vp env doctor' for diagnostics");
-            return 1;
-        }
-    };
-
     // Ensure Node.js is installed and locate its binary for PATH preparation.
     // Package-manager shims can use their own declared version, but JS-based
-    // package managers still need the project-resolved Node.js runtime.
-    let node_path = match ensure_installed(&resolution.version).await {
-        Ok(p) => p,
-        Err(e) => {
-            eprintln!("vp: Failed to install Node {}: {e}", resolution.version);
-            return 1;
+    // package managers still need the Node.js runtime selected by its mode.
+    let system_node = if PackageManagerType::from_tool(tool).is_some() {
+        match config::load_config().await {
+            Ok(config) if config.node_shim_mode == ShimMode::SystemFirst => {
+                find_system_tool("node")
+            }
+            Ok(_) => None,
+            Err(error) => {
+                eprintln!("vp: Failed to load Node.js shim mode: {error}");
+                return 1;
+            }
+        }
+    } else {
+        None
+    };
+    let resolution = if system_node.is_none() {
+        match resolve_with_cache(&cwd).await {
+            Ok(resolution) => Some(resolution),
+            Err(error) => {
+                eprintln!("vp: Failed to resolve Node version: {error}");
+                eprintln!("vp: Run 'vp env doctor' for diagnostics");
+                return 1;
+            }
+        }
+    } else {
+        None
+    };
+    let node_path = if let Some(system_node) = system_node {
+        system_node
+    } else {
+        let resolution = resolution.as_ref().expect("managed Node.js has no resolution");
+        match ensure_installed(&resolution.version).await {
+            Ok(path) => path,
+            Err(error) => {
+                eprintln!("vp: Failed to install Node {}: {error}", resolution.version);
+                return 1;
+            }
         }
     };
 
@@ -804,13 +830,19 @@ pub async fn dispatch(tool: &str, args: &[String]) -> i32 {
     // fallback. Node and bundled npm tools come from the selected Node.js runtime.
     let tool_path = match resolve_package_manager_tool(&cwd, tool).await {
         Ok(Some(path)) => path,
-        Ok(None) => match locate_tool(&resolution.version, tool) {
-            Ok(path) => path,
-            Err(e) => {
-                eprintln!("vp: Tool '{tool}' not found: {e}");
-                return 1;
+        Ok(None) => {
+            let path = match resolution.as_ref() {
+                Some(resolution) => locate_tool(&resolution.version, tool),
+                None => find_system_tool(tool).ok_or_else(|| format!("system '{tool}' not found")),
+            };
+            match path {
+                Ok(path) => path,
+                Err(error) => {
+                    eprintln!("vp: Tool '{tool}' not found: {error}");
+                    return 1;
+                }
             }
-        },
+        }
         Err(e) => {
             eprintln!("vp: Failed to resolve package manager for '{tool}': {e}");
             return 1;
@@ -837,10 +869,18 @@ pub async fn dispatch(tool: &str, args: &[String]) -> i32 {
 
     // Optional debug env vars
     if std::env::var(env_vars::VP_DEBUG_SHIM).is_ok() {
-        // SAFETY: Setting env vars at this point before exec is safe
-        unsafe {
-            std::env::set_var(env_vars::VP_ACTIVE_NODE, &resolution.version);
-            std::env::set_var(env_vars::VP_RESOLVE_SOURCE, &resolution.source);
+        if let Some(resolution) = resolution.as_ref() {
+            // SAFETY: Setting env vars at this point before exec is safe
+            unsafe {
+                std::env::set_var(env_vars::VP_ACTIVE_NODE, &resolution.version);
+                std::env::set_var(env_vars::VP_RESOLVE_SOURCE, &resolution.source);
+            }
+        } else if let Some(version) = read_node_version(&node_path) {
+            // SAFETY: Setting env vars at this point before exec is safe
+            unsafe {
+                std::env::set_var(env_vars::VP_ACTIVE_NODE, version);
+                std::env::set_var(env_vars::VP_RESOLVE_SOURCE, "system PATH");
+            }
         }
     }
 
@@ -859,19 +899,18 @@ pub async fn dispatch(tool: &str, args: &[String]) -> i32 {
         if let Some(parsed) = parse_npm_global_install(args) {
             let exit_code = exec::spawn_tool(&tool_path, args);
             if exit_code == 0 {
-                let node_dir = vp_shared::EnvConfig::get()
-                    .dirs
-                    .data
-                    .join("js_runtime")
-                    .join("node")
-                    .join(&*resolution.version);
+                let node_dir = node_prefix_from_binary(&node_path);
+                let node_version = resolution.as_ref().map_or_else(
+                    || read_node_version(&node_path).unwrap_or_else(|| "unknown".into()),
+                    |resolution| resolution.version.clone(),
+                );
                 let npm_prefix = resolve_npm_prefix(&parsed, &tool_path, &node_dir);
                 check_npm_global_install_result(
                     &parsed.packages,
                     original_path.as_deref(),
                     &npm_prefix,
                     &node_dir,
-                    &resolution.version,
+                    &node_version,
                 );
             }
             return exit_code;
@@ -879,12 +918,7 @@ pub async fn dispatch(tool: &str, args: &[String]) -> i32 {
 
         if let Some(parsed) = parse_npm_global_uninstall(args) {
             // Collect bin names before uninstall (package.json will be gone after)
-            let node_dir = vp_shared::EnvConfig::get()
-                .dirs
-                .data
-                .join("js_runtime")
-                .join("node")
-                .join(&*resolution.version);
+            let node_dir = node_prefix_from_binary(&node_path);
             let npm_prefix = resolve_npm_prefix(&parsed, &tool_path, &node_dir);
             let bin_names = collect_bin_names_from_npm(&parsed.packages, &npm_prefix, &node_dir);
             let exit_code = exec::spawn_tool(&tool_path, args);
@@ -897,6 +931,42 @@ pub async fn dispatch(tool: &str, args: &[String]) -> i32 {
 
     // Execute the tool (normal path — exec replaces process on Unix)
     exec::exec_tool(&tool_path, args)
+}
+
+fn node_prefix_from_binary(node_path: &AbsolutePath) -> AbsolutePathBuf {
+    #[cfg(windows)]
+    let prefix = node_path.parent();
+    #[cfg(not(windows))]
+    let prefix = node_path.parent().and_then(AbsolutePath::parent);
+    prefix.expect("Node.js has no installation prefix").to_absolute_path_buf()
+}
+
+fn read_node_version(node_path: &AbsolutePath) -> Option<String> {
+    let output = std::process::Command::new(node_path.as_path()).arg("--version").output().ok()?;
+    output
+        .status
+        .success()
+        .then(|| String::from_utf8_lossy(&output.stdout).trim().trim_start_matches('v').to_string())
+}
+
+async fn prepare_node_path_for_system_package_manager() -> Result<(), Error> {
+    let config = config::load_config().await?;
+    if config.node_shim_mode == ShimMode::SystemFirst
+        && let Some(node) = find_system_tool("node")
+        && let Some(bin_dir) = node.parent()
+    {
+        let _ = prepend_to_path_env(bin_dir, PrependOptions::default());
+        return Ok(());
+    }
+
+    let cwd = current_dir()?;
+    let resolution = resolve_with_cache(&cwd).await.map_err(|error| Error::Other(error.into()))?;
+    let node =
+        ensure_installed(&resolution.version).await.map_err(|error| Error::Other(error.into()))?;
+    let bin_dir =
+        node.parent().ok_or_else(|| Error::Other("Node.js has no bin directory".into()))?;
+    let _ = prepend_to_path_env(bin_dir, PrependOptions::default());
+    Ok(())
 }
 
 /// Dispatch a package binary shim.
@@ -1232,8 +1302,96 @@ pub(crate) fn locate_tool(version: &str, tool: &str) -> Result<AbsolutePathBuf, 
 /// Load shim mode from config.
 ///
 /// Returns the default (Managed) if config cannot be read.
-async fn load_shim_mode() -> ShimMode {
-    config::load_config().await.map(|c| c.shim_mode).unwrap_or_default()
+async fn load_shim_mode(tool: &str) -> ShimMode {
+    let Some(package_manager) = PackageManagerType::from_tool(tool) else {
+        return config::load_config().await.map(|config| config.node_shim_mode).unwrap_or_default();
+    };
+    resolve_package_manager_shim_mode(tool, package_manager).await
+}
+
+async fn resolve_package_manager_shim_mode(
+    tool: &str,
+    package_manager: PackageManagerType,
+) -> ShimMode {
+    let mut config = match config::load_config().await {
+        Ok(config) => config,
+        Err(error) => {
+            output::warn(&format!("Could not read package-manager shim preferences: {error}"));
+            return ShimMode::Managed;
+        }
+    };
+    if let Some(mode) = config.configured_package_manager_shim_mode_for(package_manager) {
+        return mode;
+    }
+
+    let Some(system_path) = find_system_tool(tool) else {
+        return ShimMode::Managed;
+    };
+
+    if !vp_shared::is_interactive_terminal() {
+        return ShimMode::Managed;
+    }
+
+    let Some((mode, apply_to_all)) =
+        prompt_package_manager_shim_mode(package_manager, &system_path)
+    else {
+        output::note("Package-manager preference was not saved; using the system tool this time.");
+        return ShimMode::SystemFirst;
+    };
+    if apply_to_all {
+        config.set_all_package_manager_shim_modes(mode);
+    } else {
+        config.set_package_manager_shim_mode(package_manager, mode);
+    }
+    if let Err(error) = config::save_config(&config).await {
+        output::warn(&format!("Could not save package-manager shim preferences: {error}"));
+    }
+    mode
+}
+
+fn prompt_package_manager_shim_mode(
+    package_manager: PackageManagerType,
+    system_path: &AbsolutePath,
+) -> Option<(ShimMode, bool)> {
+    let options = [
+        "Use Vite+ for all package managers".to_string(),
+        format!("Use Vite+ for {package_manager}"),
+        format!("Use system {package_manager}"),
+        "Use system package managers".to_string(),
+    ];
+
+    output::raw_stderr("vp: Vite+ now can manage package-manager versions for each project.");
+    output::raw_stderr(&format!("Existing {package_manager}: {}", system_path.as_path().display()));
+    output::raw_stderr("");
+    emit_prompt_milestone(&format!("pm-shim-choice:{package_manager}"));
+    let choice = Select::with_theme(&ColorfulTheme::default())
+        .with_prompt(format!("How should {package_manager} run?"))
+        .items(&options)
+        .default(1)
+        .interact()
+        .ok()?;
+
+    Some(match choice {
+        0 => (ShimMode::Managed, true),
+        1 => (ShimMode::Managed, false),
+        2 => (ShimMode::SystemFirst, false),
+        _ => (ShimMode::SystemFirst, true),
+    })
+}
+
+/// Emit an invisible synchronization point for the PTY snapshot suite.
+#[expect(clippy::disallowed_macros)]
+fn emit_prompt_milestone(name: &str) {
+    use std::io::Write as _;
+
+    if std::env::var_os(env_vars::VP_EMIT_MILESTONES).is_none_or(|value| value != "1") {
+        return;
+    }
+    let id = uuid::Uuid::new_v4();
+    let encoded_name = base64_simd::URL_SAFE_NO_PAD.encode_to_string(name.as_bytes());
+    let mut stderr = std::io::stderr().lock();
+    let _ = write!(stderr, "\x1b]2;pty-terminal-test:{}:{encoded_name}\x1b\\", id.simple());
+    let _ = stderr.flush();
 }
 
 /// Find a system tool in PATH, skipping the vite-plus bin directory and any

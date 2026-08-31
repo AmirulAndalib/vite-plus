@@ -120,6 +120,16 @@ impl PackageManagerType {
     pub fn hashes_cli_binary_of(self, version: &Version) -> bool {
         matches!(self, Self::Yarn) && is_yarn_berry(version)
     }
+
+    #[must_use]
+    pub const fn bin_names(self) -> &'static [&'static str] {
+        match self {
+            Self::Npm => &["npm", "npx"],
+            Self::Pnpm => &["pnpm", "pnpx"],
+            Self::Yarn => &["yarn", "yarnpkg"],
+            Self::Bun => &["bun", "bunx"],
+        }
+    }
 }
 
 /// Name of the file that records the pin vp verified when it installed a
@@ -154,6 +164,16 @@ pub struct PackageManagerResolution {
     pub project_root: AbsolutePathBuf,
 }
 
+#[derive(Debug, Clone)]
+pub struct EnvironmentPackageManagerResolution {
+    pub package_manager_type: PackageManagerType,
+    pub version: Str,
+    pub hash: Option<Str>,
+    pub source: Str,
+    pub source_path: Option<AbsolutePathBuf>,
+    pub project_root: Option<AbsolutePathBuf>,
+}
+
 /// Where the package manager selection came from (see rfcs/dev-engines.md).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PackageManagerSource {
@@ -167,6 +187,18 @@ pub enum PackageManagerSource {
     Default,
 }
 
+impl PackageManagerSource {
+    #[must_use]
+    pub const fn description(self) -> &'static str {
+        match self {
+            Self::PackageManagerField => "packageManager",
+            Self::DevEnginesPackageManager => "devEngines.packageManager",
+            Self::LockfileOrConfig => "lockfile or config",
+            Self::Default => "default",
+        }
+    }
+}
+
 /// The package manager.
 /// Use `PackageManager::builder()` to create a package manager.
 /// Command argument resolution and execution live in `vp_pm_cli`.
@@ -174,7 +206,7 @@ pub enum PackageManagerSource {
 pub struct PackageManager {
     pub(crate) client: PackageManagerType,
     pub(crate) version: Str,
-    pub(crate) install_dir: AbsolutePathBuf,
+    pub(crate) bin_prefix: AbsolutePathBuf,
 }
 
 #[derive(Debug)]
@@ -222,7 +254,11 @@ impl PackageManagerBuilder {
             .await?;
         }
 
-        Ok(PackageManager { client: package_manager_type, version, install_dir })
+        Ok(PackageManager {
+            client: package_manager_type,
+            version,
+            bin_prefix: install_dir.join("bin"),
+        })
     }
 
     /// Build the package manager with default package manager.
@@ -247,8 +283,26 @@ impl PackageManager {
     }
 
     #[must_use]
+    pub fn from_install_dir(
+        client: PackageManagerType,
+        version: impl Into<Str>,
+        install_dir: AbsolutePathBuf,
+    ) -> Self {
+        Self { client, version: version.into(), bin_prefix: install_dir.join("bin") }
+    }
+
+    #[must_use]
+    pub fn from_bin_prefix(
+        client: PackageManagerType,
+        version: impl Into<Str>,
+        bin_prefix: AbsolutePathBuf,
+    ) -> Self {
+        Self { client, version: version.into(), bin_prefix }
+    }
+
+    #[must_use]
     pub fn get_bin_prefix(&self) -> AbsolutePathBuf {
-        self.install_dir.join("bin")
+        self.bin_prefix.clone()
     }
 }
 
@@ -404,6 +458,117 @@ pub fn resolve_package_manager_from_package_json(
         source_path: package_json_path.to_absolute_path_buf(),
         project_root: workspace_root.path.to_absolute_path_buf(),
     }))
+}
+
+/// Read the package manager selected by an explicit/session override, project files, or default.
+///
+/// The returned version is the declared requirement. It is intentionally not resolved against the
+/// registry or managed installs, so callers can inspect the selection without network access.
+pub fn resolve_environment_package_manager_spec(
+    cwd: impl AsRef<AbsolutePath>,
+    override_spec: Option<(PackageManagerType, &str, Option<&str>)>,
+    default_spec: Option<(PackageManagerType, &str, Option<&str>)>,
+) -> Result<Option<EnvironmentPackageManagerResolution>, Error> {
+    if let Some((package_manager_type, version, hash)) = override_spec {
+        return Ok(Some(EnvironmentPackageManagerResolution {
+            package_manager_type,
+            version: version.into(),
+            hash: hash.map(Str::from),
+            source: "session".into(),
+            source_path: None,
+            project_root: None,
+        }));
+    }
+
+    let (workspace_root, _) = match find_workspace_root(cwd.as_ref()) {
+        Ok(result) => result,
+        Err(vt_workspace::Error::PackageJsonNotFound(_)) => {
+            return Ok(default_spec.map(environment_package_manager_default));
+        }
+        Err(error) => return Err(error.into()),
+    };
+
+    if let Some(project) = get_package_manager_from_package_json(&workspace_root)? {
+        return Ok(Some(EnvironmentPackageManagerResolution {
+            package_manager_type: project.package_manager_type,
+            version: project.version,
+            hash: project.hash,
+            source: project.source,
+            source_path: Some(project.source_path),
+            project_root: Some(project.project_root),
+        }));
+    }
+
+    if let Some((package_manager_type, version_req)) =
+        get_package_manager_from_dev_engines(&workspace_root)?
+    {
+        let version_req = version_req.unwrap_or_else(|| "*".into());
+        return Ok(Some(EnvironmentPackageManagerResolution {
+            package_manager_type,
+            version: version_req,
+            hash: None,
+            source: "devEngines.packageManager".into(),
+            source_path: Some(workspace_root.path.join("package.json").to_absolute_path_buf()),
+            project_root: Some(workspace_root.path.to_absolute_path_buf()),
+        }));
+    }
+
+    match get_package_manager_type_and_version(&workspace_root, None) {
+        Ok((package_manager_type, version_req, hash, source)) => {
+            Ok(Some(EnvironmentPackageManagerResolution {
+                package_manager_type,
+                version: version_req,
+                hash,
+                source: source.description().into(),
+                source_path: None,
+                project_root: Some(workspace_root.path.to_absolute_path_buf()),
+            }))
+        }
+        Err(Error::UnrecognizedPackageManager) => {
+            Ok(default_spec.map(environment_package_manager_default))
+        }
+        Err(error) => Err(error),
+    }
+}
+
+fn environment_package_manager_default(
+    (package_manager_type, version, hash): (PackageManagerType, &str, Option<&str>),
+) -> EnvironmentPackageManagerResolution {
+    EnvironmentPackageManagerResolution {
+        package_manager_type,
+        version: version.into(),
+        hash: hash.map(Str::from),
+        source: "default".into(),
+        source_path: None,
+        project_root: None,
+    }
+}
+
+/// Resolve an environment package-manager requirement to an exact version for managed-runtime
+/// operations such as `vp env install` and package-manager shims. When `expected` is set, a
+/// different selected family falls back to the matching configured default before registry lookup.
+pub async fn resolve_environment_package_manager(
+    cwd: impl AsRef<AbsolutePath>,
+    override_spec: Option<(PackageManagerType, &str, Option<&str>)>,
+    default_spec: Option<(PackageManagerType, &str, Option<&str>)>,
+    expected: Option<PackageManagerType>,
+) -> Result<Option<EnvironmentPackageManagerResolution>, Error> {
+    let mut resolution =
+        resolve_environment_package_manager_spec(cwd, override_spec, default_spec)?;
+    if let Some(expected) = expected
+        && resolution.as_ref().is_some_and(|resolution| resolution.package_manager_type != expected)
+    {
+        resolution = default_spec
+            .filter(|(package_manager, _, _)| *package_manager == expected)
+            .map(environment_package_manager_default);
+    }
+    let Some(mut resolution) = resolution else {
+        return Ok(None);
+    };
+    resolution.version =
+        resolve_package_manager_version(resolution.package_manager_type, &resolution.version)
+            .await?;
+    Ok(Some(resolution))
 }
 
 /// Return the managed install directory for a package manager version.
@@ -773,6 +938,20 @@ async fn get_latest_version(package_manager_type: PackageManagerType) -> Result<
     }
 }
 
+/// Resolve an exact, range, or `latest` package-manager version without downloading it.
+pub async fn resolve_package_manager_version(
+    package_manager_type: PackageManagerType,
+    version: &str,
+) -> Result<Str, Error> {
+    if version == "latest" {
+        get_latest_version(package_manager_type).await
+    } else if Version::parse(version).is_ok() {
+        Ok(version.into())
+    } else {
+        resolve_package_manager_range(package_manager_type, version).await
+    }
+}
+
 /// Abbreviated registry metadata: only the version list is needed.
 #[derive(Deserialize)]
 struct RegistryPackument {
@@ -796,6 +975,19 @@ async fn fetch_registry_versions(package_name: &str) -> Result<Vec<node_semver::
         .keys()
         .filter_map(|version| node_semver::Version::parse(version).ok())
         .collect())
+}
+
+/// Fetch all published versions for a supported package manager.
+pub async fn fetch_package_manager_versions(
+    package_manager_type: PackageManagerType,
+) -> Result<Vec<node_semver::Version>, Error> {
+    let mut versions = fetch_registry_versions(&package_manager_type.to_string()).await?;
+    if matches!(package_manager_type, PackageManagerType::Yarn) {
+        versions.extend(fetch_registry_versions("@yarnpkg/cli-dist").await?);
+    }
+    versions.sort();
+    versions.dedup();
+    Ok(versions)
 }
 
 /// Whether a version requirement explicitly asks for prereleases.
@@ -918,20 +1110,6 @@ async fn resolve_package_manager_range(
     }
 
     resolve_latest_satisfying_version(package_manager_type, &range, version_req).await
-}
-
-/// Resolve an exact, range, or floating `latest` package-manager version.
-pub async fn resolve_package_manager_version(
-    package_manager_type: PackageManagerType,
-    version: &str,
-) -> Result<Str, Error> {
-    if version == "latest" {
-        get_latest_version(package_manager_type).await
-    } else if Version::parse(version).is_ok() {
-        Ok(version.into())
-    } else {
-        resolve_package_manager_range(package_manager_type, version).await
-    }
 }
 
 /// Download the package manager and extract it to the vite-plus home directory.
@@ -1656,7 +1834,7 @@ async fn create_bun_shim_files(bin_prefix: &AbsolutePath) -> Result<(), Error> {
 /// the exact resolved version is recorded with `onFail: "download"` so future
 /// runs are deterministic. Preserves the file's key order and formatting style,
 /// placing `devEngines` next to `engines` when present.
-async fn set_dev_engines_package_manager_field(
+pub(crate) async fn set_dev_engines_package_manager_field(
     package_json_path: impl AsRef<AbsolutePath>,
     package_manager_type: PackageManagerType,
     version: &str,
@@ -2019,6 +2197,87 @@ mod tests {
         assert_eq!(PackageManagerType::from_tool("bunx"), Some(PackageManagerType::Bun));
         assert_eq!(PackageManagerType::from_tool("node"), None);
         assert_eq!(PackageManagerType::from_tool("tsc"), None);
+    }
+
+    #[tokio::test]
+    async fn environment_resolution_prefers_override_to_manifest() {
+        let temp_dir = create_temp_dir();
+        let cwd = AbsolutePathBuf::new(temp_dir.path().to_path_buf()).unwrap();
+        create_package_json(&cwd, r#"{"packageManager":"pnpm@10.18.0"}"#);
+
+        let resolution = resolve_environment_package_manager(
+            &cwd,
+            Some((PackageManagerType::Yarn, "1.22.22", Some("sha512.example"))),
+            Some((PackageManagerType::Bun, "1.2.0", None)),
+            None,
+        )
+        .await
+        .unwrap()
+        .unwrap();
+
+        assert_eq!(resolution.package_manager_type, PackageManagerType::Yarn);
+        assert_eq!(resolution.version, "1.22.22");
+        assert_eq!(resolution.hash.as_deref(), Some("sha512.example"));
+        assert_eq!(resolution.source, "session");
+    }
+
+    #[tokio::test]
+    async fn environment_resolution_uses_default_without_project_selection() {
+        let temp_dir = create_temp_dir();
+        let cwd = AbsolutePathBuf::new(temp_dir.path().to_path_buf()).unwrap();
+        create_package_json(&cwd, r#"{"name":"example"}"#);
+
+        let resolution = resolve_environment_package_manager(
+            &cwd,
+            None,
+            Some((PackageManagerType::Bun, "1.2.0", None)),
+            None,
+        )
+        .await
+        .unwrap()
+        .unwrap();
+
+        assert_eq!(resolution.package_manager_type, PackageManagerType::Bun);
+        assert_eq!(resolution.version, "1.2.0");
+        assert_eq!(resolution.source, "default");
+    }
+
+    #[tokio::test]
+    async fn environment_resolution_uses_expected_default_for_different_project_manager() {
+        let temp_dir = create_temp_dir();
+        let cwd = AbsolutePathBuf::new(temp_dir.path().to_path_buf()).unwrap();
+        create_package_json(&cwd, r#"{"packageManager":"bun@1.2.0"}"#);
+
+        let resolution = resolve_environment_package_manager(
+            &cwd,
+            None,
+            Some((PackageManagerType::Pnpm, "10.18.0", None)),
+            Some(PackageManagerType::Pnpm),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+
+        assert_eq!(resolution.package_manager_type, PackageManagerType::Pnpm);
+        assert_eq!(resolution.version, "10.18.0");
+        assert_eq!(resolution.source, "default");
+    }
+
+    #[test]
+    fn environment_spec_keeps_declared_version_range() {
+        let temp_dir = create_temp_dir();
+        let cwd = AbsolutePathBuf::new(temp_dir.path().to_path_buf()).unwrap();
+        create_package_json(
+            &cwd,
+            r#"{"devEngines":{"packageManager":{"name":"pnpm","version":"^10.0.0"}}}"#,
+        );
+
+        let resolution =
+            resolve_environment_package_manager_spec(&cwd, None, None).unwrap().unwrap();
+
+        assert_eq!(resolution.package_manager_type, PackageManagerType::Pnpm);
+        assert_eq!(resolution.version, "^10.0.0");
+        assert_eq!(resolution.source, "devEngines.packageManager");
     }
 
     /// How fully a fake package manager install is written.
