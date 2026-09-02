@@ -5,6 +5,7 @@ import { styleText } from 'node:util';
 
 import * as prompts from '@voidzero-dev/vite-plus-prompts';
 
+import { SETUP_VP_VERSION } from './constants.ts';
 import { pkgRoot } from './path.ts';
 
 // --- Backward-compatible exports ---
@@ -105,7 +106,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up Vite+
-        uses: voidzero-dev/setup-vp@v1
+        uses: voidzero-dev/setup-vp@${SETUP_VP_VERSION}
         with:
           cache: true
           run-install: true

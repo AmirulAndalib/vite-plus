@@ -13,7 +13,7 @@ import {
 } from '../types/index.ts';
 import { writeAgentInstructions } from '../utils/agent.ts';
 import { unwrapCliParseOutcome } from '../utils/cli-parse.ts';
-import { isForceOverrideMode, VITE_PLUS_VERSION } from '../utils/constants.ts';
+import { isForceOverrideMode, SETUP_VP_VERSION, VITE_PLUS_VERSION } from '../utils/constants.ts';
 import { writeEditorConfigs } from '../utils/editor.ts';
 import { hasVitePlusDependency, readNearestPackageJson } from '../utils/package.ts';
 import { displayRelative } from '../utils/path.ts';
@@ -61,6 +61,7 @@ import {
   migrateEslintToOxlint,
   migrateNodeVersionManagerFile,
   migratePrettierToOxfmt,
+  migrateSetupVpVersion,
   migrateTsupToTsdown,
   configureYarnNodeModulesMode,
   rewriteMonorepo,
@@ -594,6 +595,13 @@ function showMigrationSummary(options: {
   if (report.nodeVersionFileMigrated) {
     log(`${styleText('gray', '•')} Node version manager file migrated to .node-version`);
   }
+  const setupVpFileCount = report.setupVpVersionUpdatedFileCount;
+  if (setupVpFileCount > 0) {
+    const fileLabel = setupVpFileCount === 1 ? 'file' : 'files';
+    log(
+      `${styleText('gray', '•')} setup-vp updated to ${SETUP_VP_VERSION} in ${setupVpFileCount} GitHub Actions ${fileLabel}`,
+    );
+  }
   if (report.wrappedPluginConfigCount > 0) {
     log(
       `${styleText('gray', '•')} Inline Vite plugins wrapped with lazyPlugins for check/lint/fmt`,
@@ -745,6 +753,9 @@ async function executeMigrationPlan(
     updateMigrationProgress('Migrating node version file');
     migrateNodeVersionManagerFile(workspaceInfo.rootDir, plan.nodeVersionDetection, report);
   }
+
+  updateMigrationProgress('Updating setup-vp workflows');
+  migrateSetupVpVersion(workspaceInfo.rootDir, report);
 
   // 4. Run vp install to ensure the project is ready
   updateMigrationProgress('Installing dependencies');
@@ -1016,6 +1027,11 @@ async function main() {
         migrationProgressStarted = false;
       }
     };
+
+    updateMigrationProgress('Updating setup-vp workflows');
+    if (migrateSetupVpVersion(workspaceInfoOptional.rootDir, report).length > 0) {
+      didMigrate = true;
+    }
 
     const pendingCoreMigration = detectPendingCoreMigration(workspaceInfoOptional);
     const vitePlusBootstrapPending = detectVitePlusBootstrapPending(

@@ -11,6 +11,17 @@
     "rolldown/**",
     "vite/**"
   ],
+  "customManagers": [
+    {
+      "description": "Keep the exact setup-vp migration target current.",
+      "customType": "regex",
+      "managerFilePatterns": ["/^packages\\/cli\\/src\\/utils\\/constants\\.ts$/"],
+      "matchStrings": ["export const SETUP_VP_VERSION = '(?<currentValue>[^']+)';"],
+      "depNameTemplate": "voidzero-dev/setup-vp",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver-coerced"
+    }
+  ],
   "packageRules": [
     {
       "description": "Ignore upstream toolchain npm packages (vendored via sync-remote or bumped by the proactive catalog workflow); everything else stays enabled so security alerts get fixed.",

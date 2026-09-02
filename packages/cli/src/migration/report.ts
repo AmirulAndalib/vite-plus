@@ -25,6 +25,7 @@ export interface MigrationReport {
   prettierMigrated: boolean;
   tsupMigrated: boolean;
   nodeVersionFileMigrated: boolean;
+  setupVpVersionUpdatedFileCount: number;
   gitHooksConfigured: boolean;
   frameworkShimAdded: boolean;
   packageManagerBootstrapConfigured: boolean;
@@ -49,6 +50,7 @@ export function createMigrationReport(): MigrationReport {
     tsupMigrated: false,
     prettierMigrated: false,
     nodeVersionFileMigrated: false,
+    setupVpVersionUpdatedFileCount: 0,
     gitHooksConfigured: false,
     frameworkShimAdded: false,
     packageManagerBootstrapConfigured: false,

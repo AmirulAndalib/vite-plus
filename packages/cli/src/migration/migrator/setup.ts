@@ -4,12 +4,14 @@ import path from 'node:path';
 import * as prompts from '@voidzero-dev/vite-plus-prompts';
 import { globSync } from 'glob';
 import semver from 'semver';
+import { parse as parseYaml } from 'yaml';
 
 import { type DownloadPackageManagerResult } from '../../../binding/index.js';
+import { SETUP_VP_VERSION } from '../../utils/constants.ts';
 import { editJsonFile } from '../../utils/json.ts';
 import { detectConfigs } from '../detector.ts';
 import { type MigrationReport } from '../report.ts';
-import { warnMigration } from './shared.ts';
+import { isPlainRecord, warnMigration } from './shared.ts';
 
 export function setPackageManager(
   projectDir: string,
@@ -129,20 +131,79 @@ export function parseNvmrcVersion(alias: string): string | null {
  */
 const NODE_VERSION_FILE_NVMRC_RE = /(node-version-file:[ \t]*)(['"]?)(\.\/)?\.nvmrc\2(?=\s|$)/gm;
 
+function isCompositeActionFile(filePath: string): boolean {
+  try {
+    const action = parseYaml(fs.readFileSync(filePath, 'utf8')) as unknown;
+    return isPlainRecord(action) && isPlainRecord(action.runs) && action.runs.using === 'composite';
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Collect GitHub Actions YAML files that may carry a `node-version-file:`
- * reference: top-level workflows (`.github/workflows/*.{yml,yaml}`, which GitHub
- * runs only when flat in that directory) and composite action definitions
- * (`.github/actions/**\/action.{yml,yaml}`, which may nest at any depth). Returns
- * absolute paths; a missing `.github` tree just yields an empty list. `nocase`
- * keeps the match case-insensitive on case-sensitive filesystems.
+ * Collect top-level workflows and composite action definitions under `.github`.
+ * Action metadata must declare `runs.using: composite`. Paths are absolute, and
+ * filename matching is case-insensitive.
  */
 function collectGithubActionFiles(projectPath: string): string[] {
-  return globSync(['workflows/*.{yml,yaml}', 'actions/**/action.{yml,yaml}'], {
+  const globOptions = {
     cwd: path.join(projectPath, '.github'),
     absolute: true,
     nocase: true,
-  });
+    nodir: true,
+  } as const;
+  const workflows = globSync('workflows/*.{yml,yaml}', globOptions);
+  const compositeActions = globSync('**/action.{yml,yaml}', {
+    ...globOptions,
+    dot: true,
+  }).filter(isCompositeActionFile);
+
+  return [...new Set([...workflows, ...compositeActions])];
+}
+
+/**
+ * Match an exact `voidzero-dev/setup-vp@v1` action reference while preserving
+ * indentation, list syntax, quote style, and trailing comments. The end guard
+ * prevents prefix matches such as `@v1.2.3` or `@v10`.
+ */
+const SETUP_VP_V1_RE =
+  /^([ \t]*(?:-[ \t]*)?uses[ \t]*:[ \t]*)(['"]?)voidzero-dev\/setup-vp@v1\2(?=[ \t]*(?:#.*)?\r?$)/gm;
+
+/**
+ * Replace the frozen `voidzero-dev/setup-vp@v1` tag with the latest exact
+ * release known to this Vite+ version. GitHub workflow files and composite
+ * action definitions are both covered. Existing exact versions, commit SHAs,
+ * and commented-out steps are left unchanged.
+ *
+ * Returns the project-relative paths of the updated files.
+ */
+export function migrateSetupVpVersion(projectPath: string, report?: MigrationReport): string[] {
+  const updatedFiles: string[] = [];
+
+  for (const filePath of collectGithubActionFiles(projectPath)) {
+    const relativePath = path.relative(projectPath, filePath);
+    try {
+      const original = fs.readFileSync(filePath, 'utf8');
+      const rewritten = original.replace(
+        SETUP_VP_V1_RE,
+        `$1$2voidzero-dev/setup-vp@${SETUP_VP_VERSION}$2`,
+      );
+      if (rewritten !== original) {
+        fs.writeFileSync(filePath, rewritten);
+        updatedFiles.push(relativePath);
+      }
+    } catch (error) {
+      warnMigration(
+        `Could not update the setup-vp version in ${relativePath}: ${error instanceof Error ? error.message : String(error)}`,
+        report,
+      );
+    }
+  }
+
+  if (report) {
+    report.setupVpVersionUpdatedFileCount += updatedFiles.length;
+  }
+  return updatedFiles;
 }
 
 /**

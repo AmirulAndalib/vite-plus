@@ -17,6 +17,7 @@ import {
   writeAgentInstructions,
   writeCopilotSetupWorkflow,
 } from '../agent.js';
+import { SETUP_VP_VERSION } from '../constants.js';
 import { pkgRoot } from '../path.js';
 
 type MockNode =
@@ -536,7 +537,7 @@ describe('writeCopilotSetupWorkflow', () => {
     expect(content).toContain('runs-on: ubuntu-latest');
     expect(content).toContain('persist-credentials: false');
     expect(content).toContain('uses: actions/checkout@v6');
-    expect(content).toContain('uses: voidzero-dev/setup-vp@v1');
+    expect(content).toContain(`uses: voidzero-dev/setup-vp@${SETUP_VP_VERSION}`);
     expect(content).toContain('run-install: true');
     expect(content).toContain('- .github/workflows/copilot-setup-steps.yml');
 
