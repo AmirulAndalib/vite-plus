@@ -321,3 +321,39 @@ export function pnpmMajor(version: string | undefined): number | undefined {
   const coerced = version ? semver.coerce(version)?.version : undefined;
   return coerced ? semver.major(coerced) : undefined;
 }
+
+// Packages that own the Oxlint JS-plugin authoring API as a published contract.
+// Optional `@oxlint/plugins` is also a runtime contract for consumers of a
+// published integration. Optional `oxlint` keeps the existing tool policy.
+export const OXLINT_PLUGINS_PACKAGE = '@oxlint/plugins';
+
+export const OXLINT_PLUGIN_API_PACKAGES = ['oxlint', OXLINT_PLUGINS_PACKAGE] as const;
+
+export function packageOwnsOxlintApi(pkg: DependencyBag): boolean {
+  return (
+    pkg.optionalDependencies?.[OXLINT_PLUGINS_PACKAGE] !== undefined ||
+    OXLINT_PLUGIN_API_PACKAGES.some(
+      (name) =>
+        pkg.dependencies?.[name] !== undefined || pkg.peerDependencies?.[name] !== undefined,
+    )
+  );
+}
+
+/**
+ * Capture plugin owners before manifest edits, so the import rewriter can
+ * preserve their upstream API imports after those edits.
+ */
+export function collectOxlintOwnerDirs(
+  rootDir: string,
+  packages?: readonly { path: string }[],
+): string[] {
+  const owners: string[] = [];
+  const candidates = [rootDir, ...(packages ?? []).map((pkg) => path.join(rootDir, pkg.path))];
+  for (const dir of candidates) {
+    const pkg = readPackageJsonIfExists(path.join(dir, 'package.json'));
+    if (pkg && packageOwnsOxlintApi(pkg)) {
+      owners.push(dir);
+    }
+  }
+  return owners;
+}
