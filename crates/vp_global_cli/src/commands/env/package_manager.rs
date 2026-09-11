@@ -13,6 +13,24 @@ pub(crate) async fn resolve_current(
     resolve_current_for(cwd, None).await
 }
 
+/// Selecting a manager for vp commands must not change direct shim versions.
+pub(crate) async fn resolve_shim_for(
+    cwd: &AbsolutePath,
+    expected: PackageManagerType,
+) -> Result<Option<EnvironmentPackageManagerResolution>, Error> {
+    let session = config::read_session_package_manager().await;
+    let session = session.as_deref().map(parse_package_manager_spec_with_hash).transpose()?;
+    let default = configured_default_for(&config::load_config().await?, expected)?;
+    resolve_environment_package_manager(
+        cwd,
+        session.as_ref().map(|(kind, version, hash)| (*kind, version.as_str(), hash.as_deref())),
+        default.as_ref().map(|(kind, version, hash)| (*kind, version.as_str(), hash.as_deref())),
+        Some(expected),
+    )
+    .await
+    .map_err(Error::from)
+}
+
 pub(crate) async fn resolve_current_for(
     cwd: &AbsolutePath,
     expected: Option<PackageManagerType>,

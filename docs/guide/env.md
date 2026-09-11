@@ -54,7 +54,9 @@ Package-manager selection uses this priority:
 6. The named package manager's global default version
 7. The named shim's latest release
 
-A selected manager controls only its named shims. For example, pnpm controls `pnpm` and `pnpx`; invoking `npm` still resolves npm independently. Alias pairs are `npm`/`npx`, `pnpm`/`pnpx`, `yarn`/`yarnpkg`, and `bun`/`bunx`. Without a matching project selection, a named shim uses its configured default version and otherwise uses the latest release without prompting. The resolved version is cached for one hour and an expired cache remains available when the registry cannot be reached. The directly invoked npm shim keeps its Node-bundled fallback, while an explicit `vp env ... npm` family scope uses standalone npm's latest release.
+`VP_PACKAGE_MANAGER` selects the manager and version for commands such as `vp install`. Direct package-manager shims ignore this variable and continue to resolve their versions from the session file, project configuration, and family default.
+
+A project selection controls only its named shims. For example, pnpm controls `pnpm` and `pnpx`; invoking `npm` still resolves npm independently. Alias pairs are `npm`/`npx`, `pnpm`/`pnpx`, `yarn`/`yarnpkg`, and `bun`/`bunx`. Without a matching project selection, a named shim uses its configured default version and otherwise uses the latest release without prompting. The resolved version is cached for one hour and an expired cache remains available when the registry cannot be reached. The directly invoked npm shim keeps its Node-bundled fallback, while an explicit `vp env ... npm` family scope uses standalone npm's latest release.
 
 A fresh install uses the split platform layout by default. On Unix, Vite+
 stores managed runtimes and related files in `~/.local/share/vite-plus`. It
