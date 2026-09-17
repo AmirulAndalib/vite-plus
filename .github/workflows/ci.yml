@@ -1102,6 +1102,18 @@ jobs:
         with:
           tool: cargo-nextest
 
+      # Keep fixtures outside runner.temp: setup-node writes an .npmrc there,
+      # which Yarn Classic discovers when walking parent directories.
+      - name: Create NTFS temp directory for case-sensitive shim snapshots
+        if: matrix.shard == 1
+        id: snapshot-temp
+        shell: pwsh
+        run: |
+          $volume = [System.IO.Path]::GetPathRoot($env:RUNNER_TEMP)
+          $snapshotTemp = Join-Path $volume ('vp-snapshots-' + [guid]::NewGuid().ToString('N'))
+          New-Item -ItemType Directory -Path $snapshotTemp | Out-Null
+          "directory=$snapshotTemp" >> $env:GITHUB_OUTPUT
+
       # `cargo-nextest` is invoked directly so the job never depends on the
       # runner's Rust toolchain. --workspace-remap makes nextest rewrite
       # CARGO_MANIFEST_DIR and CARGO_BIN_EXE_vpt to this checkout, which is
@@ -1121,7 +1133,20 @@ jobs:
           export VP_SNAP_PWSH_BIN="$(cygpath -w "$(command -v pwsh.exe)")"
           # --no-fail-fast: on a snapshot suite every diff is diagnostic
           # signal; cancelling on the first failure hides the rest.
-          cargo-nextest nextest run --archive-file windows-snapshot-tests.tar.zst --workspace-remap . --no-fail-fast --partition hash:${{ matrix.shard }}/3
+          test_exit=0
+          # This fixture requires case-sensitive directory support, which the
+          # default temp directory on these runners does not provide.
+          cargo-nextest nextest run --archive-file windows-snapshot-tests.tar.zst --workspace-remap . --no-fail-fast --partition hash:${{ matrix.shard }}/3 \
+            -E 'not test(windows_case_sensitive_shims)' || test_exit=$?
+
+          if [[ '${{ matrix.shard }}' == '1' ]]; then
+            # Run both flavors on NTFS once. Rust's GetTempPath2 ignores
+            # TEMP/TMP under the SYSTEM account, so override SystemTemp.
+            SystemTemp='${{ steps.snapshot-temp.outputs.directory }}' \
+              cargo-nextest nextest run --archive-file windows-snapshot-tests.tar.zst --workspace-remap . --no-fail-fast \
+                -E 'test(windows_case_sensitive_shims)' || test_exit=$?
+          fi
+          exit "$test_exit"
         env:
           RUST_BACKTRACE: '1'
           # Keep Windows env parity with the `test` recipe in justfile.
