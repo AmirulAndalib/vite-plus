@@ -1,35 +1,5 @@
 <script setup lang="ts">
-const upgradePrompt = `Upgrade this project from Vite+ 0.3.x to Vite+ 1.0 while preserving its test behavior.
-
-Read these guides before making changes:
-
-- ${__DOCS_ORIGIN__}/guide/migrate
-- ${__DOCS_ORIGIN__}/guide/vitest-v5
-- https://vitest.dev/guide/migration/
-
-Inspect the worktree and preserve unrelated changes. Keep the original manifests, lockfile, and installed packages available so migration can identify the original Vitest version. Do not update the project's vite-plus or Vitest dependencies before running migration.
-
-Use the CLI from the target Vite+ 1.0 release or its preview build. A global installation is optional. Use a supported Node.js runtime from the Vite+ compatibility guide.
-
-- With a global vp installation, follow ${__DOCS_ORIGIN__}/guide/upgrade to upgrade it and check \`vp toolchain --global\`. Run \`vp help migrate\`, then \`vp migrate --no-interactive\` from the workspace root.
-- Without a global installation, run the target CLI through the package manager from the workspace root. For the 1.0.0 release, use \`pnpm dlx --package=vite-plus@1.0.0 vp migrate --no-interactive\` or \`npx --package=vite-plus@1.0.0 vp migrate --no-interactive\`. First run the same command with \`help migrate\` instead of \`migrate --no-interactive\` to read its help. These commands fetch the target CLI without replacing the old project dependencies first.
-
-Replace 1.0.0 with the intended release version. For a preview, use the version from its PR and pass \`--registry=https://registry-bridge.viteplus.dev\` to pnpm or npx before the vp command. Do not run migration with the old project's node_modules/.bin/vp. Keep the existing project setup; do not use --full unless I request it.
-
-Resolve BLOCK findings and rerun migration. Review each REVIEW finding using its documentation link, even if migration exits with success. Preserve test intent and keep the generated v4 compatibility settings and comments for the first validation run.
-
-Check workspace manifests, catalogs, overrides, and import changes against the Vite+ guide. Keep test APIs on supported vite-plus/test entries; use @vitest/browser-webdriverio for the community WebDriverIO provider.
-
-Run \`vp install\`, \`vp check\`, and \`vp test\`, plus the project's browser, coverage, and benchmark suites where configured. Run \`vp build\` or \`vp pack\` as appropriate. Without a global CLI, finish installation with the project's package manager, then invoke the updated local CLI through it, such as \`pnpm exec vp check\` or \`npm exec -- vp check\`. Fix migration failures without weakening assertions or dropping test coverage.
-
-After establishing a passing baseline, try to remove the generated "Vitest v4 compatibility" settings with no code changes or small, localized fixes:
-
-1. Use the migration diff and generated comments to identify additions in root, workspace, and inline project configs. Read each linked explanation and check the effective setting after removal, including inherited values. Preserve pre-existing user settings and settings whose origin is unclear.
-2. Remove one added setting at a time and first run the affected projects and suites without code changes. If needed, make small, localized application, test, or setup fixes that preserve test intent, such as correcting a locator or adjusting mock setup in a few tests. Do not weaken assertions, accept snapshot changes without review, or reduce the test set. For fakeTimers.toNotFake, remove only the added Temporal entry and preserve other exclusions. Do not weaken coverage enforcement: retain glob-threshold perFile: true unless I approve aggregate checking, even if coverage passes.
-3. Keep a removal only when the affected tests pass and still execute the same tests without new skips. Remove that setting's generated comment too. If removal requires widespread test edits or shared setup refactoring, keep compatibility for now and report the follow-up work. Restore the setting and its comment if validation still fails, cannot run, or leaves uncertainty about behavior. Undo only cleanup-specific trial edits; preserve completed migration fixes and unrelated work.
-4. Run the full validation commands again with the accepted removals together. Report each candidate's config path, removed or retained status, code changes, commands and results, and the reason for retaining it. Distinguish a deferred rewrite from a setting you could not validate.
-
-Report the migration changes and unresolved findings as well. Do not commit or push unless I ask.`;
+import { migrationPrompt, upgradePrompt } from '../.vitepress/theme/data/migration-prompts.ts';
 </script>
 
 # Migrate to Vite+
@@ -38,7 +8,7 @@ Report the migration changes and unresolved findings as well. Do not commit or p
 
 ## Overview
 
-This command is the starting point for consolidating separate Vite, Vitest, Oxlint, Oxfmt, ESLint, Prettier, and tsup setups into Vite+.
+This command is the starting point for consolidating separate Vite, Vitest, Oxlint, Oxfmt, ESLint, Prettier, tsdown, and tsup setups into Vite+.
 
 Use it when you want to take an existing project and move it onto the Vite+ defaults instead of wiring each tool by hand.
 
@@ -107,34 +77,15 @@ After running the migration:
 
 ## Migration Prompt
 
-If you want to hand this work to a coding agent (or the reader is a coding agent!), use this migration prompt:
+View and copy this prompt into your coding agent to migrate an existing project to Vite+:
 
-```md
-Migrate this project to Vite+. Vite+ replaces the current split tooling around runtime management, package management, dev/build/test commands, linting, formatting, and packaging. Run `vp help` to understand Vite+ capabilities and `vp help migrate` before making changes. Use `vp migrate --no-interactive` in the workspace root. Make sure the project is using Vite 8+ and Vitest 4.1+ before migrating.
-
-After the migration:
-
-- Confirm `vite` imports were rewritten to `vite-plus` where needed
-- Confirm Vitest and browser imports use supported `vite-plus/test*` entries; keep community WebDriverIO provider imports on `@vitest/browser-webdriverio`
-- On pnpm, keep the `vite`, `vitest` dependency entries configured by `vp migrate` so the workspace aliases and overrides stay effective; with other package managers, you can remove them once those rewrites are confirmed
-- Move remaining tool-specific config into the appropriate blocks in `vite.config.ts`
-
-Command mapping to keep in mind:
-
-- `vp run <script>` is the equivalent of `pnpm run <script>`
-- `vp dev` and `vp test` always run the built-ins; `vp run dev` and `vp run test` run the `dev` and `test` scripts from `package.json`
-- `vp install`, `vp add`, and `vp remove` delegate through the package manager declared by `packageManager`
-- `vp dev`, `vp build`, `vp preview`, `vp lint`, `vp fmt`, `vp check`, and `vp pack` replace the corresponding standalone tools
-- Prefer `vp check` for validation loops
-
-Finally, verify the migration by running: `vp install`, `vp check`, `vp test`, and `vp build`
-
-Summarize the migration at the end and report any manual follow-up still required.
-```
+<CopyPrompt :prompt="migrationPrompt" label="View Migration Prompt" />
 
 ## Upgrade from Vite+ 0.3 to 1.0
 
 Vite+ 1.0 includes the breaking changes in Vitest 5. Read the [Vite+ compatibility guide](./vitest-v5.md) alongside the [upstream migration guide](https://vitest.dev/guide/migration/).
+
+Library builds also use tsdown 0.23. Review the [pack configuration migration rules](./migrate-rules.md#pack-configuration) and [upstream release notes](https://github.com/rolldown/tsdown/releases/tag/v0.23.0) for option changes and new defaults.
 
 Keep your project's original dependencies and lockfile until migration identifies the old runner. Updating the project dependencies first can prevent the migration from preserving v4 behavior. Use one of the following paths from the workspace root.
 
@@ -188,6 +139,8 @@ On an existing Vite+ project, use the default upgrade flow. Add `--full` if you 
 
 After the migrated project passes validation, [check whether you can remove the generated v4 compatibility settings](./vitest-v5.md#remove-unneeded-compatibility-settings) with no code changes or small, localized fixes. Keep compatibility for now if removal requires extensive test changes or you cannot validate the result.
 
+For libraries, review the generated [tsdown compatibility settings](#tsdown) after a successful `vp pack` run. Follow their documentation links before adopting the new defaults, and check the emitted imports and declarations with your package's consumers.
+
 ### Copy Prompt
 
 View and copy this prompt into your coding agent to upgrade an existing Vite+ 0.3 project:
@@ -227,6 +180,17 @@ const { page } = await import('vite-plus/test/browser/context');
 `declare module 'vitest'` / `declare module '@vitest/browser*'` augmentations are intentionally **not** rewritten — `vite-plus/test*` is a thin re-export of upstream `vitest*`, so type augmentations have to target the upstream module identity to merge correctly. Leave those `declare module` statements pointing at `'vitest'` / `'@vitest/browser*'`.
 
 ### tsdown
+
+`vp migrate` updates supported static options in `pack` blocks and `tsdown.config.*` for tsdown 0.23. This also runs for existing Vite+ projects and workspace packages without `--full`. See [Pack Configuration](./migrate-rules.md#pack-configuration) for the option mappings and cases that require manual review.
+
+The transform preserves earlier defaults by inserting `deps.resolveDepSubpath: true` and, when ATTW checks are enabled, `attw.profile: 'strict'` if these settings are absent. Each inserted setting includes a `tsdown <0.23 compatibility` comment with a documentation link and removal guidance. Explicit settings remain unchanged.
+
+Keep these settings for the first `vp pack` run. After validation, review whether your package can adopt the new defaults:
+
+- Removing `deps.resolveDepSubpath: true` [preserves external subpath imports as written](https://tsdown.dev/options/dependencies#deps-resolvedepsubpath). Check that consumers can resolve the emitted imports.
+- Removing the inserted `attw.profile: 'strict'` selects the `esm-only` [resolution profile](https://tsdown.dev/options/lint#profiles). This skips `node10` and CommonJS resolution checks. Keep `strict` if your package requires those checks.
+
+Remove each accepted setting's generated comment too. Run `vp pack` and your package's consumer checks after each change. Keep the setting when you cannot validate the result.
 
 If your project uses a `tsdown.config.ts`, move its options into the `pack` block in `vite.config.ts`:
 
