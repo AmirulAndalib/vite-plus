@@ -8,7 +8,6 @@
 )]
 
 mod dirs;
-pub mod download_progress;
 mod env_config;
 pub mod env_vars;
 mod error;
@@ -20,6 +19,7 @@ pub mod output;
 mod package_json;
 mod path_env;
 mod process;
+pub mod progress;
 mod stdio;
 pub mod string_similarity;
 mod tls;
