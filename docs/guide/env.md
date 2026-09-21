@@ -124,7 +124,7 @@ vp env off
 
 This switches both components to system-first mode. Vite+ prefers system tools and falls back to managed installations. Mixed configurations compose: package-manager launchers that look up Node.js through PATH receive the runtime selected by the Node mode.
 
-Using `pm` records the selected mode for all currently supported package managers and replaces their individual choices. An unscoped `on` or `off` does the same while also changing Node.js. A family without a recorded mode defaults to managed mode until an `on` / `off` command configures it.
+Using `pm` records the selected mode for all currently supported package managers and replaces their individual choices. An unscoped `on` or `off` does the same while also changing Node.js.
 
 ## Commands
 
