@@ -254,12 +254,18 @@ test('defineConfig supports function config with plain plugins array', () => {
   expect(userPlugins(config.plugins).length).toBe(1);
 });
 
-test('defineConfig supports async function config with plain plugins array', async () => {
+test('defineConfig contextually types tool config in async functions', async () => {
   const configFn = defineConfig(async () => ({
+    lint: {
+      rules: {
+        'no-console': 'warn',
+      },
+    },
     plugins: [{ name: 'async-fn-plugin' }],
   }));
   const config = await configFn({ command: 'build', mode: 'production' });
   expect(userPlugins(config.plugins).length).toBe(1);
+  expect(config.lint?.rules?.['no-console']).toBe('warn');
 });
 
 test('defineConfig supports vitest plugin with configureVitest hook', () => {

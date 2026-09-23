@@ -113,6 +113,16 @@ type ViteUserConfigExport =
   | ViteUserConfigFnPromise
   | ViteUserConfigFn;
 
+type DefinedViteUserConfig<T extends ViteUserConfigExport> = T extends ViteUserConfigFnPromise
+  ? ViteUserConfigFnPromise
+  : T extends ViteUserConfigFnObject
+    ? ViteUserConfigFnObject
+    : T extends ViteUserConfigFn
+      ? ViteUserConfigFn
+      : T extends Promise<UserConfig>
+        ? Promise<UserConfig>
+        : UserConfig;
+
 /**
  * `require` anchored at THIS module's location so `require.resolve` reaches
  * the `vitest` / `@vitest/*` family that the `vite-plus` package directly
@@ -864,14 +874,14 @@ function injectPluginIntoConfig(config: ViteUserConfigExport): ViteUserConfigExp
   return injectPlugin(config);
 }
 
-export function defineConfig(config: UserConfig): UserConfig;
-export function defineConfig(config: Promise<UserConfig>): Promise<UserConfig>;
-export function defineConfig(config: ViteUserConfigFnObject): ViteUserConfigFnObject;
-export function defineConfig(config: ViteUserConfigFnPromise): ViteUserConfigFnPromise;
-export function defineConfig(config: ViteUserConfigExport): ViteUserConfigExport;
-
-export function defineConfig(config: ViteUserConfigExport): ViteUserConfigExport {
-  return viteDefineConfig(injectPluginIntoConfig(config));
+/**
+ * Keep a single generic signature so callback returns receive one contextual
+ * config type. Separate sync and async overloads make TypeScript widen nested
+ * literals in async callbacks before overload resolution (for example, an
+ * Oxlint rule severity of `'warn'` becomes `string`).
+ */
+export function defineConfig<T extends ViteUserConfigExport>(config: T): DefinedViteUserConfig<T> {
+  return viteDefineConfig(injectPluginIntoConfig(config)) as DefinedViteUserConfig<T>;
 }
 
 /**
