@@ -1,4 +1,6 @@
-use std::{collections::BTreeMap, process::ExitStatus};
+#![deny(clippy::print_stdout)]
+
+use std::{collections::BTreeMap, io, process::ExitStatus};
 
 use console::style;
 use futures::future::try_join_all;
@@ -16,6 +18,10 @@ use super::{
 use crate::{cli::SortingMethod, error::Error};
 
 const DEFAULT_MAJOR_VERSIONS: usize = 10;
+
+fn print_stdout(message: &str) {
+    vp_shared::output::print_and_flush(&mut io::stdout().lock(), message);
+}
 
 #[derive(Serialize)]
 struct RemoteEnvironmentJson {
@@ -152,24 +158,25 @@ pub async fn execute(
     });
 
     if json {
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&RemoteEnvironmentJson { node, package_managers })?
-        );
+        let output =
+            serde_json::to_string_pretty(&RemoteEnvironmentJson { node, package_managers })?;
+        print_stdout(&format!("{output}\n"));
         return Ok(ExitStatus::default());
     }
     if let Some(node) = node {
-        println!("Node.js");
+        print_stdout("Node.js\n");
         print_node_versions(&node);
     }
     if let Some(mut package_managers) = package_managers {
         for kind in package_manager::selected(scope) {
             let name = kind.to_string();
             let versions = package_managers.remove(&name).unwrap_or_default();
-            println!();
-            println!("{}", package_manager::title(kind));
+            print_stdout(&format!("\n{}\n", package_manager::title(kind)));
             for entry in versions {
-                println!("  {}", format_package_manager_version(&entry, use_color()));
+                print_stdout(&format!(
+                    "  {}\n",
+                    format_package_manager_version(&entry, use_color())
+                ));
             }
         }
     }
@@ -184,7 +191,7 @@ fn print_node_versions(versions: &[NodeVersionJson]) {
 
     let colorize = use_color();
     for entry in versions {
-        println!("  {}", format_node_version(entry, colorize));
+        print_stdout(&format!("  {}\n", format_node_version(entry, colorize)));
     }
 }
 

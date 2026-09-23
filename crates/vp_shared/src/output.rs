@@ -4,9 +4,43 @@
 //! consistent output across the entire CLI. Styling uses console's color detection
 //! for the stream receiving each message.
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::{
+    io::{self, Write},
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use console::style;
+
+/// Write a message and flush it without panicking for expected output-stream errors.
+///
+/// Use this for command output that can be piped to a reader which exits early.
+pub fn print_and_flush(writer: &mut dyn Write, message: &str) {
+    let mut remaining = message.as_bytes();
+    while !remaining.is_empty() {
+        match writer.write(remaining) {
+            Ok(0) => fail_for_writer_error(io::ErrorKind::WriteZero.into()),
+            Ok(written) => remaining = &remaining[written..],
+            Err(error) if error.kind() == io::ErrorKind::BrokenPipe => return,
+            Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
+            Err(error) if error.kind() == io::ErrorKind::WouldBlock => std::thread::yield_now(),
+            Err(error) => fail_for_writer_error(error),
+        }
+    }
+
+    loop {
+        match writer.flush() {
+            Ok(()) => return,
+            Err(error) if error.kind() == io::ErrorKind::BrokenPipe => return,
+            Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
+            Err(error) if error.kind() == io::ErrorKind::WouldBlock => std::thread::yield_now(),
+            Err(error) => fail_for_writer_error(error),
+        }
+    }
+}
+
+fn fail_for_writer_error(error: io::Error) -> ! {
+    panic!("failed writing command output: {error}");
+}
 
 /// When set, user-facing stdout output (info/pass/note/success/raw) is routed
 /// to stderr instead. Shim dispatch enables this once at entry: a shim's
@@ -112,4 +146,59 @@ pub fn raw_inline(msg: &str) {
 #[expect(clippy::print_stderr, clippy::disallowed_macros)]
 pub fn raw_stderr(msg: &str) {
     eprintln!("{msg}");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Default)]
+    struct RetryWriter {
+        output: Vec<u8>,
+        write_calls: usize,
+        flush_calls: usize,
+    }
+
+    impl Write for RetryWriter {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.write_calls += 1;
+            match self.write_calls {
+                1 => {
+                    let written = buf.len().min(2);
+                    self.output.extend_from_slice(&buf[..written]);
+                    Ok(written)
+                }
+                2 => Err(io::ErrorKind::WouldBlock.into()),
+                _ => {
+                    self.output.extend_from_slice(buf);
+                    Ok(buf.len())
+                }
+            }
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            self.flush_calls += 1;
+            match self.flush_calls {
+                1 => Err(io::ErrorKind::Interrupted.into()),
+                2 => Err(io::ErrorKind::WouldBlock.into()),
+                _ => Ok(()),
+            }
+        }
+    }
+
+    #[test]
+    fn print_and_flush_retries_temporary_errors_without_losing_output() {
+        let mut writer = RetryWriter::default();
+        print_and_flush(&mut writer, "output\n");
+        assert_eq!(writer.output, b"output\n");
+        assert_eq!(writer.flush_calls, 3);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn print_and_flush_tolerates_a_closed_pipe() {
+        let (reader, writer) = nix::unistd::pipe().unwrap();
+        drop(reader);
+        print_and_flush(&mut std::fs::File::from(writer), "output\n");
+    }
 }

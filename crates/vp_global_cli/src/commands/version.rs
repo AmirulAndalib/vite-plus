@@ -1,8 +1,10 @@
 //! Version command.
 
+#![deny(clippy::print_stdout)]
+
 use std::{
     collections::BTreeMap,
-    fs,
+    fs, io,
     path::{Path, PathBuf},
     process::ExitStatus,
 };
@@ -121,12 +123,16 @@ fn resolve_tool_version(
     }
 }
 
+fn print_stdout(message: &str) {
+    vp_shared::output::print_and_flush(&mut io::stdout().lock(), message);
+}
+
 fn print_rows(title: &str, rows: &[(&str, String)]) {
-    println!("{}", help::render_heading(title));
+    print_stdout(&format!("{}\n", help::render_heading(title)));
     let label_width = rows.iter().map(|(label, _)| label.chars().count()).max().unwrap_or(0);
     for (label, value) in rows {
         let padding = " ".repeat(label_width.saturating_sub(label.chars().count()));
-        println!("  {}{}  {value}", help::accent(label), padding);
+        print_stdout(&format!("  {}{}  {value}\n", help::accent(label), padding));
     }
 }
 
@@ -169,8 +175,7 @@ fn detect_system_node_version() -> Option<String> {
 pub async fn execute(cwd: AbsolutePathBuf) -> Result<ExitStatus, Error> {
     vp_shared::header::print_header();
 
-    println!("vp v{}", env!("CARGO_PKG_VERSION"));
-    println!();
+    print_stdout(concat!("vp v", env!("CARGO_PKG_VERSION"), "\n\n"));
 
     // Local vite-plus and tools
     let local = find_local_vite_plus(cwd.as_path());
@@ -178,7 +183,7 @@ pub async fn execute(cwd: AbsolutePathBuf) -> Result<ExitStatus, Error> {
         "Local vite-plus",
         &[("vite-plus", format_version(local.as_ref().map(|pkg| pkg.version.clone())))],
     );
-    println!();
+    print_stdout("\n");
 
     let manifest = local.as_ref().and_then(read_toolchain_manifest);
     let tool_rows = TOOL_SPECS
@@ -189,7 +194,7 @@ pub async fn execute(cwd: AbsolutePathBuf) -> Result<ExitStatus, Error> {
         })
         .collect::<Vec<_>>();
     print_rows("Tools", &tool_rows);
-    println!();
+    print_stdout("\n");
 
     // Environment info
     let package_manager_info = find_workspace_root(&cwd)

@@ -214,7 +214,9 @@ is identical on every platform:
 `test -f x && cmd` guards keep their short-circuit), `vpt write-file`,
 `vpt touch-file`, `vpt replace-file-content`, `vpt list-dir`, `vpt mkdir`,
 `vpt rm`, `vpt cp`, `vpt chmod`, `vpt grep-file`, `vpt json-edit`,
-`vpt pipe-stdin <data> -- <argv>`, plus task payloads for `vp run` tests:
+`vpt pipe-stdin <data> -- <argv>`,
+`vpt head-lines <count> -- <argv>` (closes the child's stdout after the selected
+lines), plus task payloads for `vp run` tests:
 `vpt print`, `vpt print-color`, `vpt print-env`, `vpt print-cwd`,
 `vpt print-native-path` (prints OS-native separators, for redaction
 self-tests), `vpt check-tty`, `vpt read-stdin`, `vpt exit <code>`,

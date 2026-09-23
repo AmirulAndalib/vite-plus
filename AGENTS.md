@@ -22,7 +22,7 @@ This guide applies to this repository; `CLAUDE.md` points here. For changes to t
 - Keep public test imports on `vite-plus/test*`, which wraps upstream `vitest` and `@vitest/browser*`. Do not recreate `packages/test` or `@voidzero-dev/vite-plus-test`.
 - Vite Task crates are git dependencies in `Cargo.toml`; there is no local `crates/vt`. Do not run `cargo test -p vt` here.
 - Use `vp_shared::VpDirs` for Vite+ directory roots. See `crates/vp_shared/src/dirs.rs` and `crates/vp_shared/src/dirs/resolution.rs`. Call sites must not construct category paths or read `VP_HOME` or `XDG_*` directly.
-- Follow [`.clippy.toml`](.clippy.toml) for Rust restrictions and replacements. Use `crates/vp_shared/src/output.rs` for user-facing output and `crates/vp_shared/src/env_config.rs` for test-scoped environment configuration. See `crates/vp_command/src/lib.rs` for `vt_path` usage.
+- Follow [`.clippy.toml`](.clippy.toml) for Rust restrictions and replacements. Use `crates/vp_shared/src/output.rs` for user-facing output; command output that can be piped must use `print_and_flush` or another broken-pipe-safe helper instead of `print!` or `println!`. Enable `clippy::print_stdout` in migrated modules so CI prevents direct stdout macros from returning. Use `crates/vp_shared/src/env_config.rs` for test-scoped environment configuration. See `crates/vp_command/src/lib.rs` for `vt_path` usage.
 - For TypeScript CLI output, use `packages/cli/src/utils/terminal.ts` and match the surrounding command style.
 - Keep changes scoped to the task and leave unrelated tracked and untracked files alone. Prefer source references over duplicated instructions in this guide.
 

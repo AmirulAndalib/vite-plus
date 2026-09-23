@@ -28,3 +28,12 @@ steps = [
   { argv = ["vp", "env", "list", "node"], comment = "Installed Node.js versions retain their interactive formatting", formatted-snapshot = true },
   { argv = ["vp", "env", "list", "pnpm"], comment = "Installed package-manager versions use the same interactive formatting", formatted-snapshot = true },
 ]
+
+[[case]]
+name = "command_env_list_remote_closed_pipe"
+vp = "global"
+skip-platforms = ["windows"]
+seed-runtime = false
+steps = [
+  { argv = ["vpt", "head-lines", "1", "--", "vp", "env", "list-remote", "--lts"], tty = false, comment = "Closing stdout after the heading does not make remote version listing fail" },
+]
