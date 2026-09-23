@@ -136,12 +136,15 @@ fn print_shell_result(shell: &str) {
     ] {
         let value = path.to_string();
         if shell == "powershell" {
-            println!(
+            vp_shared::output::print_stdout_line(format_args!(
                 "$script:{powershell_name} = '{}'",
                 setup::escape_powershell_single_quoted_string(&value)
-            );
+            ));
         } else {
-            println!("{sh_name}=\"{}\"", setup::escape_posix_double_quoted_string(&value));
+            vp_shared::output::print_stdout_line(format_args!(
+                "{sh_name}=\"{}\"",
+                setup::escape_posix_double_quoted_string(&value)
+            ));
         }
     }
 }

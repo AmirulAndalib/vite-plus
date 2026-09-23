@@ -53,7 +53,7 @@ pub async fn execute(
 
     if specs.is_empty() {
         show_pinned(&cwd).await?;
-        println!();
+        vp_shared::output::print_stdout_line(format_args!(""));
         return show_package_manager_pin(&cwd).await;
     }
 
@@ -99,17 +99,17 @@ pub async fn execute(
 async fn show_package_manager_pin(cwd: &AbsolutePathBuf) -> Result<ExitStatus, Error> {
     match resolve_package_manager_from_package_json(cwd)? {
         Some(resolution) => {
-            println!(
+            vp_shared::output::print_stdout_line(format_args!(
                 "Pinned package manager: {}@{}",
                 resolution.package_manager_type, resolution.version
-            );
-            println!(
+            ));
+            vp_shared::output::print_stdout_line(format_args!(
                 "  Source: {} ({})",
                 resolution.source_path.as_path().display(),
                 resolution.source
-            );
+            ));
         }
-        None => println!("No package manager pinned."),
+        None => vp_shared::output::print_stdout_line(format_args!("No package manager pinned.")),
     }
     Ok(ExitStatus::default())
 }
@@ -122,18 +122,21 @@ async fn show_pinned(cwd: &AbsolutePathBuf) -> Result<ExitStatus, Error> {
     if tokio::fs::try_exists(&node_version_path).await.unwrap_or(false) {
         let content = tokio::fs::read_to_string(&node_version_path).await?;
         let version = content.trim();
-        println!("Pinned version: {version}");
-        println!("  Source: {}", node_version_path.as_path().display());
+        vp_shared::output::print_stdout_line(format_args!("Pinned version: {version}"));
+        vp_shared::output::print_stdout_line(format_args!(
+            "  Source: {}",
+            node_version_path.as_path().display()
+        ));
         return Ok(ExitStatus::default());
     }
 
     // Check devEngines.runtime in the current directory's package.json
     if let Some(version) = read_dev_engines_node_version(cwd).await {
-        println!("Pinned version: {version}");
-        println!(
+        vp_shared::output::print_stdout_line(format_args!("Pinned version: {version}"));
+        vp_shared::output::print_stdout_line(format_args!(
             "  Source: {} (devEngines.runtime)",
             cwd.join(PACKAGE_JSON_FILE).as_path().display()
-        );
+        ));
         return Ok(ExitStatus::default());
     }
 
@@ -141,26 +144,34 @@ async fn show_pinned(cwd: &AbsolutePathBuf) -> Result<ExitStatus, Error> {
         if resolution.source == VersionSource::NvmrcFile
             && resolution.project_root.as_ref() == Some(cwd)
         {
-            println!("Pinned version: {}", resolution.version);
-            println!("  Source: {}", cwd.join(NVMRC_FILE).as_path().display());
+            vp_shared::output::print_stdout_line(format_args!(
+                "Pinned version: {}",
+                resolution.version
+            ));
+            vp_shared::output::print_stdout_line(format_args!(
+                "  Source: {}",
+                cwd.join(NVMRC_FILE).as_path().display()
+            ));
             return Ok(ExitStatus::default());
         }
         if resolution.source == VersionSource::EnginesNode {
             let path = resolution.source_path.unwrap_or_else(|| cwd.join(PACKAGE_JSON_FILE));
-            println!("No version pinned.");
-            println!(
+            vp_shared::output::print_stdout_line(format_args!("No version pinned."));
+            vp_shared::output::print_stdout_line(format_args!(
                 "  Node.js constraint: {} from {} (engines.node)",
                 resolution.version,
                 path.as_path().display()
-            );
+            ));
             return Ok(ExitStatus::default());
         }
     }
 
     // Check for inherited version from parent directories
     if let Some((version, source)) = find_inherited_version(cwd).await? {
-        println!("No version pinned in current directory.");
-        println!("  Inherited: {version} from {source}");
+        vp_shared::output::print_stdout_line(format_args!(
+            "No version pinned in current directory."
+        ));
+        vp_shared::output::print_stdout_line(format_args!("  Inherited: {version} from {source}"));
         return Ok(ExitStatus::default());
     }
 
@@ -169,12 +180,17 @@ async fn show_pinned(cwd: &AbsolutePathBuf) -> Result<ExitStatus, Error> {
     match config.default_node_version {
         Some(version) => {
             let config_path = get_config_path()?;
-            println!("No version pinned.");
-            println!("  Using default: {version} (from {})", config_path.as_path().display());
+            vp_shared::output::print_stdout_line(format_args!("No version pinned."));
+            vp_shared::output::print_stdout_line(format_args!(
+                "  Using default: {version} (from {})",
+                config_path.as_path().display()
+            ));
         }
         None => {
-            println!("No version pinned.");
-            println!("  Run 'vp env pin <version>' to pin a version.");
+            vp_shared::output::print_stdout_line(format_args!("No version pinned."));
+            vp_shared::output::print_stdout_line(format_args!(
+                "  Run 'vp env pin <version>' to pin a version."
+            ));
         }
     }
 
@@ -349,7 +365,7 @@ fn confirm_overwrite_pin(
     force: bool,
 ) -> Result<bool, Error> {
     if existing_version == resolved_version {
-        println!("Already pinned to {resolved_version}");
+        vp_shared::output::print_stdout_line(format_args!("Already pinned to {resolved_version}"));
         return Ok(false);
     }
     if force {
@@ -358,9 +374,9 @@ fn confirm_overwrite_pin(
 
     // Prompt for confirmation, defaulting to yes (the user explicitly asked to
     // pin a new version, so only an explicit "no" cancels)
-    print!("{source_label} {existing_version}");
-    println!();
-    print!("Overwrite with {resolved_version}? (Y/n): ");
+    vp_shared::output::print_stdout(format_args!("{source_label} {existing_version}"));
+    vp_shared::output::print_stdout_line(format_args!(""));
+    vp_shared::output::print_stdout(format_args!("Overwrite with {resolved_version}? (Y/n): "));
     std::io::stdout().flush()?;
 
     let mut input = String::new();
@@ -368,7 +384,7 @@ fn confirm_overwrite_pin(
 
     let answer = input.trim();
     if answer.eq_ignore_ascii_case("n") || answer.eq_ignore_ascii_case("no") {
-        println!("Cancelled.");
+        vp_shared::output::print_stdout_line(format_args!("Cancelled."));
         return Ok(false);
     }
     Ok(true)
@@ -416,7 +432,11 @@ async fn pin_node_version_file(
     tokio::fs::write(&node_version_path, format!("{resolved_version}\n")).await?;
 
     print_pin_success(input_version, resolved_version, was_alias);
-    println!("  Created {} in {}", NODE_VERSION_FILE, cwd.as_path().display());
+    vp_shared::output::print_stdout_line(format_args!(
+        "  Created {} in {}",
+        NODE_VERSION_FILE,
+        cwd.as_path().display()
+    ));
 
     // If a devEngines.runtime range is declared and no longer satisfied, offer to
     // sync it in interactive terminals and warn otherwise (rfcs/dev-engines.md)
@@ -481,7 +501,10 @@ async fn pin_nvmrc_file(
     }
     tokio::fs::write(&path, content).await?;
     print_pin_success(input_version, resolved_version, was_alias);
-    println!("  Updated {NVMRC_FILE} in {}", cwd.as_path().display());
+    vp_shared::output::print_stdout_line(format_args!(
+        "  Updated {NVMRC_FILE} in {}",
+        cwd.as_path().display()
+    ));
     Ok(true)
 }
 
@@ -512,7 +535,10 @@ async fn pin_dev_engines(
     write_dev_engines_node_version(cwd, resolved_version).await?;
 
     print_pin_success(input_version, resolved_version, was_alias);
-    println!("  Updated devEngines.runtime in {}", package_json_path.as_path().display());
+    vp_shared::output::print_stdout_line(format_args!(
+        "  Updated devEngines.runtime in {}",
+        package_json_path.as_path().display()
+    ));
 
     Ok(true)
 }
@@ -550,10 +576,10 @@ async fn check_dev_engines_sync(
     }
 
     if interactive && !force {
-        print!(
+        vp_shared::output::print_stdout(format_args!(
             "devEngines.runtime (\"{declared}\") is no longer satisfied. Update it to \
-             {resolved_version}? (y/n): "
-        );
+         {resolved_version}? (y/n): "
+        ));
         std::io::stdout().flush()?;
 
         let mut input = String::new();
@@ -742,7 +768,9 @@ pub async fn do_unpin(
             let file = if target == PinTarget::Nvmrc { NVMRC_FILE } else { NODE_VERSION_FILE };
             let path = cwd.join(file);
             if !tokio::fs::try_exists(&path).await.unwrap_or(false) {
-                println!("No {file} file in current directory.");
+                vp_shared::output::print_stdout_line(format_args!(
+                    "No {file} file in current directory."
+                ));
                 return Ok(ExitStatus::default());
             }
 
@@ -763,7 +791,9 @@ pub async fn do_unpin(
                     cwd.join(PACKAGE_JSON_FILE).as_path().display()
                 ));
             } else {
-                println!("No Node.js pin found in current directory.");
+                vp_shared::output::print_stdout_line(format_args!(
+                    "No Node.js pin found in current directory."
+                ));
             }
         }
         PinTarget::PackageManager => {
@@ -867,7 +897,9 @@ async fn pin_package_manager(
     })
     .map_err(|error| Error::Other(format!("failed to update package.json: {error}").into()))?;
     if !changed {
-        println!("Already pinned to {package_manager}@{resolved}");
+        vp_shared::output::print_stdout_line(format_args!(
+            "Already pinned to {package_manager}@{resolved}"
+        ));
         return Ok(ExitStatus::default());
     }
     tokio::fs::write(&package_json_path, updated).await?;
@@ -962,7 +994,9 @@ async fn unpin_package_manager(
     let root = workspace_root(cwd)?.unwrap_or_else(|| cwd.clone());
     let package_json_path = root.join(PACKAGE_JSON_FILE);
     let Ok(content) = tokio::fs::read_to_string(&package_json_path).await else {
-        println!("No package manager pin found in current directory.");
+        vp_shared::output::print_stdout_line(format_args!(
+            "No package manager pin found in current directory."
+        ));
         return Ok(());
     };
     let effective = resolve_package_manager_from_package_json(&root)?;
@@ -1006,7 +1040,9 @@ async fn unpin_package_manager(
         crate::shim::invalidate_cache();
         output::success("Removed package-manager pin");
     } else {
-        println!("No package manager pin found in current directory.");
+        vp_shared::output::print_stdout_line(format_args!(
+            "No package manager pin found in current directory."
+        ));
     }
     Ok(())
 }

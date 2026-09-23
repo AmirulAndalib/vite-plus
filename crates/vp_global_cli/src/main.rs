@@ -9,8 +9,7 @@
     clippy::disallowed_macros,
     clippy::disallowed_methods,
     clippy::disallowed_types,
-    clippy::print_stderr,
-    clippy::print_stdout
+    clippy::print_stderr
 )]
 
 mod cli;
@@ -358,12 +357,36 @@ fn dump_dirs_from_env_config() -> bool {
     }
     use vp_shared::env_vars::dump_dirs;
     let dirs = &vp_shared::EnvConfig::get().dirs;
-    println!("{}\t{}", dump_dirs::LAYOUT, dirs.layout().as_str());
-    println!("{}\t{}", dump_dirs::DATA, dirs.data.as_path().display());
-    println!("{}\t{}", dump_dirs::BIN, dirs.bin.as_path().display());
-    println!("{}\t{}", dump_dirs::CACHE, dirs.cache.as_path().display());
-    println!("{}\t{}", dump_dirs::CONFIG, dirs.config.as_path().display());
-    println!("{}\t{}", dump_dirs::STATE, dirs.state.as_path().display());
+    vp_shared::output::print_stdout_line(format_args!(
+        "{}\t{}",
+        dump_dirs::LAYOUT,
+        dirs.layout().as_str()
+    ));
+    vp_shared::output::print_stdout_line(format_args!(
+        "{}\t{}",
+        dump_dirs::DATA,
+        dirs.data.as_path().display()
+    ));
+    vp_shared::output::print_stdout_line(format_args!(
+        "{}\t{}",
+        dump_dirs::BIN,
+        dirs.bin.as_path().display()
+    ));
+    vp_shared::output::print_stdout_line(format_args!(
+        "{}\t{}",
+        dump_dirs::CACHE,
+        dirs.cache.as_path().display()
+    ));
+    vp_shared::output::print_stdout_line(format_args!(
+        "{}\t{}",
+        dump_dirs::CONFIG,
+        dirs.config.as_path().display()
+    ));
+    vp_shared::output::print_stdout_line(format_args!(
+        "{}\t{}",
+        dump_dirs::STATE,
+        dirs.state.as_path().display()
+    ));
     true
 }
 
@@ -371,7 +394,7 @@ fn dump_dirs_from_env_config() -> bool {
 async fn main() -> ExitCode {
     // Probe before tracing, directory resolution, or argument dispatch can emit output.
     if env::var_os(vp_shared::env_vars::VP_SELF_SETUP_SUPPORT_CHECK).is_some() {
-        println!("vite-plus-self-setup-v1");
+        vp_shared::output::print_stdout_line(format_args!("vite-plus-self-setup-v1"));
         return ExitCode::SUCCESS;
     }
 
@@ -404,7 +427,10 @@ async fn main() -> ExitCode {
 
     // Replace bash completion script to fix completion for items containing ':'
     if env::var_os("VP_COMPLETE").is_some_and(|shell| shell == "bash") && args.len() == 1 {
-        print!("{}", include_str!("../completion-register.bash"));
+        vp_shared::output::print_stdout(format_args!(
+            "{}",
+            include_str!("../completion-register.bash")
+        ));
         return ExitCode::SUCCESS;
     }
 

@@ -42,7 +42,7 @@ pub async fn execute(cwd: AbsolutePathBuf, tool: &str) -> Result<ExitStatus, Err
     if mode == ShimMode::SystemFirst
         && let Some(path) = shim::dispatch::find_system_tool(tool)
     {
-        println!("{}", path.as_path().display());
+        vp_shared::output::print_stdout_line(format_args!("{}", path.as_path().display()));
         return Ok(ExitStatus::default());
     }
     if let Some(status) = execute_package_manager_tool(&cwd, tool).await? {
@@ -95,18 +95,22 @@ async fn execute_npm_link_binary(tool: &str, bin_config: &BinConfig) -> Result<E
         }
     };
 
-    println!("{}", binary_path.as_path().display());
-    println!(
+    vp_shared::output::print_stdout_line(format_args!("{}", binary_path.as_path().display()));
+    vp_shared::output::print_stdout_line(format_args!(
         "  {:<LABEL_WIDTH$}  {}",
         style("Package:").dim(),
         style(&bin_config.package.as_str()).blue().bright()
-    );
-    println!("  {:<LABEL_WIDTH$}  {}", style("Source:").dim(), style("npm").dim());
-    println!(
+    ));
+    vp_shared::output::print_stdout_line(format_args!(
+        "  {:<LABEL_WIDTH$}  {}",
+        style("Source:").dim(),
+        style("npm").dim()
+    ));
+    vp_shared::output::print_stdout_line(format_args!(
         "  {:<LABEL_WIDTH$}  {}",
         style("Node:").dim(),
         style(&bin_config.node_version).green().bright()
-    );
+    ));
 
     Ok(ExitStatus::default())
 }
@@ -184,13 +188,17 @@ async fn execute_package_manager_tool(
         return Ok(Some(exit_status(1)));
     }
 
-    println!("{}", tool_path.as_path().display());
-    println!(
+    vp_shared::output::print_stdout_line(format_args!("{}", tool_path.as_path().display()));
+    vp_shared::output::print_stdout_line(format_args!(
         "  {:<LABEL_WIDTH$}  {}",
         style("Package:").dim(),
         style(format!("{expected_type}@{version}")).blue().bright()
-    );
-    println!("  {:<LABEL_WIDTH$}  {}", style("Source:").dim(), style(&source).dim());
+    ));
+    vp_shared::output::print_stdout_line(format_args!(
+        "  {:<LABEL_WIDTH$}  {}",
+        style("Source:").dim(),
+        style(&source).dim()
+    ));
 
     Ok(Some(ExitStatus::default()))
 }
@@ -201,7 +209,7 @@ async fn execute_core_tool(cwd: AbsolutePathBuf, tool: &str) -> Result<ExitStatu
         && super::config::load_config().await?.node_shim_mode == ShimMode::SystemFirst
         && let Some(path) = shim::dispatch::find_system_tool(tool)
     {
-        println!("{}", path.as_path().display());
+        vp_shared::output::print_stdout_line(format_args!("{}", path.as_path().display()));
         return Ok(ExitStatus::default());
     }
 
@@ -235,16 +243,20 @@ async fn execute_core_tool(cwd: AbsolutePathBuf, tool: &str) -> Result<ExitStatu
     }
 
     // Print binary path (first line, uncolored, pipe-friendly)
-    println!("{}", tool_path.as_path().display());
+    vp_shared::output::print_stdout_line(format_args!("{}", tool_path.as_path().display()));
 
     // Print metadata
     let source_display = format_source(&resolution.source, resolution.source_path.as_deref());
-    println!(
+    vp_shared::output::print_stdout_line(format_args!(
         "  {:<LABEL_WIDTH$}  {}",
         style("Version:").dim(),
         style(&resolution.version).green().bright()
-    );
-    println!("  {:<LABEL_WIDTH$}  {}", style("Source:").dim(), style(&source_display).dim());
+    ));
+    vp_shared::output::print_stdout_line(format_args!(
+        "  {:<LABEL_WIDTH$}  {}",
+        style("Source:").dim(),
+        style(&source_display).dim()
+    ));
 
     Ok(ExitStatus::default())
 }
@@ -285,21 +297,29 @@ async fn execute_package_binary(
     let installed_str = installed_local.format("%Y-%m-%d").to_string();
 
     // Print binary path (first line, uncolored, pipe-friendly)
-    println!("{}", binary_path.as_path().display());
+    vp_shared::output::print_stdout_line(format_args!("{}", binary_path.as_path().display()));
 
     // Print metadata
-    println!(
+    vp_shared::output::print_stdout_line(format_args!(
         "  {:<LABEL_WIDTH$}  {}",
         style("Package:").dim(),
         style(format!("{}@{}", metadata.name, metadata.version)).blue().bright()
-    );
-    println!("  {:<LABEL_WIDTH$}  {}", style("Binaries:").dim(), metadata.bins.join(", "));
-    println!(
+    ));
+    vp_shared::output::print_stdout_line(format_args!(
+        "  {:<LABEL_WIDTH$}  {}",
+        style("Binaries:").dim(),
+        metadata.bins.join(", ")
+    ));
+    vp_shared::output::print_stdout_line(format_args!(
         "  {:<LABEL_WIDTH$}  {}",
         style("Node:").dim(),
         style(&metadata.platform.node).green().bright()
-    );
-    println!("  {:<LABEL_WIDTH$}  {}", style("Installed:").dim(), style(&installed_str).dim());
+    ));
+    vp_shared::output::print_stdout_line(format_args!(
+        "  {:<LABEL_WIDTH$}  {}",
+        style("Installed:").dim(),
+        style(&installed_str).dim()
+    ));
 
     Ok(ExitStatus::default())
 }

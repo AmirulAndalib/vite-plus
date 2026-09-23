@@ -47,11 +47,15 @@ struct PackageManagerInfo {
 }
 
 fn print_rows(title: &str, rows: &[(String, String)]) {
-    println!("{}", help::render_heading(title));
+    vp_shared::output::print_stdout_line(format_args!("{}", help::render_heading(title)));
     let label_width = rows.iter().map(|(label, _)| label.chars().count()).max().unwrap_or(0);
     for (label, value) in rows {
         let padding = " ".repeat(label_width.saturating_sub(label.chars().count()));
-        println!("  {}{}  {value}", help::accent(label), padding);
+        vp_shared::output::print_stdout_line(format_args!(
+            "  {}{}  {value}",
+            help::accent(label),
+            padding
+        ));
     }
 }
 
@@ -108,7 +112,10 @@ pub async fn execute(
     };
 
     if json {
-        println!("{}", serde_json::to_string_pretty(&CurrentEnvInfo { node, package_manager })?);
+        vp_shared::output::print_stdout_line(format_args!(
+            "{}",
+            serde_json::to_string_pretty(&CurrentEnvInfo { node, package_manager })?
+        ));
         return Ok(ExitStatus::default());
     }
 
@@ -126,7 +133,7 @@ pub async fn execute(
     }
     if let Some(package_manager) = package_manager {
         if scope.includes_node() {
-            println!();
+            vp_shared::output::print_stdout_line(format_args!(""));
         }
         let mut rows = vec![
             ("Name".into(), package_manager.name),

@@ -43,8 +43,8 @@ const KEY_WIDTH: usize = 18;
 
 /// Print a section header (bold, with blank line before).
 fn print_section(name: &str) {
-    println!();
-    println!("{}", style(&name).bold());
+    vp_shared::output::print_stdout_line(format_args!(""));
+    vp_shared::output::print_stdout_line(format_args!("{}", style(&name).bold()));
 }
 
 /// Print an aligned key-value line with a status indicator.
@@ -53,11 +53,11 @@ fn print_section(name: &str) {
 /// Use `" "` for informational lines with no status.
 fn print_check(status: &str, key: &str, value: &str) {
     if status.trim().is_empty() {
-        println!("    {key:<KEY_WIDTH$}{value}");
+        vp_shared::output::print_stdout_line(format_args!("    {key:<KEY_WIDTH$}{value}"));
     } else if key.trim().is_empty() {
-        println!("  {status} {value}");
+        vp_shared::output::print_stdout_line(format_args!("  {status} {value}"));
     } else {
-        println!("  {status} {key:<KEY_WIDTH$}{value}");
+        vp_shared::output::print_stdout_line(format_args!("  {status} {key:<KEY_WIDTH$}{value}"));
     }
 }
 
@@ -71,7 +71,10 @@ fn print_package_manager_mode(key: &str, mode: ShimMode) {
 
 /// Print a continuation/hint line (dimmed).
 fn print_hint(text: &str) {
-    println!("  {}", style(format!("note: {text}")).dim());
+    vp_shared::output::print_stdout_line(format_args!(
+        "  {}",
+        style(format!("note: {text}")).dim()
+    ));
 }
 
 /// Abbreviate home directory to `~` for display.
@@ -90,7 +93,7 @@ pub async fn execute(cwd: AbsolutePathBuf, scope: Option<String>) -> Result<Exit
     let mut has_errors = false;
 
     // Section: Installation
-    println!("{}", style("Installation").bold());
+    vp_shared::output::print_stdout_line(format_args!("{}", style("Installation").bold()));
     if crate::homebrew::owns_current_exe() {
         print_check(" ", "CLI source", "Homebrew");
         if let Ok(binary) = std::env::current_exe().and_then(std::fs::canonicalize) {
@@ -146,17 +149,20 @@ pub async fn execute(cwd: AbsolutePathBuf, scope: Option<String>) -> Result<Exit
     }
 
     // Summary
-    println!();
+    vp_shared::output::print_stdout_line(format_args!(""));
     if has_errors {
-        println!(
+        vp_shared::output::print_stdout_line(format_args!(
             "{}",
             style("\u{2717} Some issues found. Run the suggested commands to fix them.")
                 .red()
                 .bold()
-        );
+        ));
         Ok(super::exit_status(1))
     } else {
-        println!("{}", style("\u{2713} All checks passed").green().bold());
+        vp_shared::output::print_stdout_line(format_args!(
+            "{}",
+            style("\u{2713} All checks passed").green().bold()
+        ));
         Ok(ExitStatus::default())
     }
 }
@@ -559,7 +565,7 @@ async fn check_path(scope: EnvScope) -> bool {
             &style("not in PATH").red().to_string(),
         );
         print_hint(&format!("Expected: {bin_display}"));
-        println!();
+        vp_shared::output::print_stdout_line(format_args!(""));
         print_path_fix(&vp_shared::EnvConfig::get().dirs.config);
         return false;
     }
@@ -630,28 +636,48 @@ fn print_path_fix(env_dir: &vt_path::AbsolutePath) {
             env_path
         };
 
-        println!("  {}", style("Add to your shell profile (~/.zshrc, ~/.bashrc, etc.):").dim());
-        println!();
-        println!("  . \"{env_path}/env\"");
-        println!();
-        println!("  {}", style("For fish shell, add to ~/.config/fish/config.fish:").dim());
-        println!();
-        println!("  source \"{env_path}/env.fish\"");
-        println!();
-        println!("  {}", style("For Nushell, add to ~/.config/nushell/config.nu:").dim());
-        println!();
-        println!("  source '{env_path}/env.nu'");
-        println!();
-        println!("  {}", style("Then restart your terminal.").dim());
+        vp_shared::output::print_stdout_line(format_args!(
+            "  {}",
+            style("Add to your shell profile (~/.zshrc, ~/.bashrc, etc.):").dim()
+        ));
+        vp_shared::output::print_stdout_line(format_args!(""));
+        vp_shared::output::print_stdout_line(format_args!("  . \"{env_path}/env\""));
+        vp_shared::output::print_stdout_line(format_args!(""));
+        vp_shared::output::print_stdout_line(format_args!(
+            "  {}",
+            style("For fish shell, add to ~/.config/fish/config.fish:").dim()
+        ));
+        vp_shared::output::print_stdout_line(format_args!(""));
+        vp_shared::output::print_stdout_line(format_args!("  source \"{env_path}/env.fish\""));
+        vp_shared::output::print_stdout_line(format_args!(""));
+        vp_shared::output::print_stdout_line(format_args!(
+            "  {}",
+            style("For Nushell, add to ~/.config/nushell/config.nu:").dim()
+        ));
+        vp_shared::output::print_stdout_line(format_args!(""));
+        vp_shared::output::print_stdout_line(format_args!("  source '{env_path}/env.nu'"));
+        vp_shared::output::print_stdout_line(format_args!(""));
+        vp_shared::output::print_stdout_line(format_args!(
+            "  {}",
+            style("Then restart your terminal.").dim()
+        ));
     }
 
     #[cfg(windows)]
     {
         let _ = env_dir;
-        println!("  {}", style("Add the bin directory to your PATH via:").dim());
-        println!("  System Properties -> Environment Variables -> Path");
-        println!();
-        println!("  {}", style("Then restart your terminal.").dim());
+        vp_shared::output::print_stdout_line(format_args!(
+            "  {}",
+            style("Add the bin directory to your PATH via:").dim()
+        ));
+        vp_shared::output::print_stdout_line(format_args!(
+            "  System Properties -> Environment Variables -> Path"
+        ));
+        vp_shared::output::print_stdout_line(format_args!(""));
+        vp_shared::output::print_stdout_line(format_args!(
+            "  {}",
+            style("Then restart your terminal.").dim()
+        ));
     }
 }
 
@@ -705,30 +731,48 @@ fn print_ide_setup_guidance(env_dir: &vt_path::AbsolutePath) {
         "",
         &style("GUI applications may not see shell PATH changes.").yellow().to_string(),
     );
-    println!();
+    vp_shared::output::print_stdout_line(format_args!(""));
 
     #[cfg(target_os = "macos")]
     {
-        println!("  {}", style("macOS:").dim());
-        println!("  {}", style("Add to ~/.zshenv or ~/.profile:").dim());
-        println!("  . \"{env_path}/env\"");
-        println!("  {}", style("Then restart your IDE to apply changes.").dim());
+        vp_shared::output::print_stdout_line(format_args!("  {}", style("macOS:").dim()));
+        vp_shared::output::print_stdout_line(format_args!(
+            "  {}",
+            style("Add to ~/.zshenv or ~/.profile:").dim()
+        ));
+        vp_shared::output::print_stdout_line(format_args!("  . \"{env_path}/env\""));
+        vp_shared::output::print_stdout_line(format_args!(
+            "  {}",
+            style("Then restart your IDE to apply changes.").dim()
+        ));
     }
 
     #[cfg(target_os = "linux")]
     {
-        println!("  {}", style("Linux:").dim());
-        println!("  {}", style("Add to ~/.profile:").dim());
-        println!("  . \"{env_path}/env\"");
-        println!("  {}", style("Then log out and log back in for changes to take effect.").dim());
+        vp_shared::output::print_stdout_line(format_args!("  {}", style("Linux:").dim()));
+        vp_shared::output::print_stdout_line(format_args!(
+            "  {}",
+            style("Add to ~/.profile:").dim()
+        ));
+        vp_shared::output::print_stdout_line(format_args!("  . \"{env_path}/env\""));
+        vp_shared::output::print_stdout_line(format_args!(
+            "  {}",
+            style("Then log out and log back in for changes to take effect.").dim()
+        ));
     }
 
     // Fallback for other Unix platforms
     #[cfg(not(any(target_os = "macos", target_os = "linux")))]
     {
-        println!("  {}", style("Add to your shell profile:").dim());
-        println!("  . \"{env_path}/env\"");
-        println!("  {}", style("Then restart your IDE to apply changes.").dim());
+        vp_shared::output::print_stdout_line(format_args!(
+            "  {}",
+            style("Add to your shell profile:").dim()
+        ));
+        vp_shared::output::print_stdout_line(format_args!("  . \"{env_path}/env\""));
+        vp_shared::output::print_stdout_line(format_args!(
+            "  {}",
+            style("Then restart your IDE to apply changes.").dim()
+        ));
     }
 }
 

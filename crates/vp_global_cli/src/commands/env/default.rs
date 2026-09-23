@@ -29,7 +29,9 @@ pub async fn execute(values: Vec<String>, unset: bool) -> Result<ExitStatus, Err
         }
         save_config(&config).await?;
         crate::shim::invalidate_cache();
-        println!("Cleared selected environment defaults.");
+        vp_shared::output::print_stdout_line(format_args!(
+            "Cleared selected environment defaults."
+        ));
         return Ok(ExitStatus::default());
     }
 
@@ -67,7 +69,7 @@ pub async fn execute(values: Vec<String>, unset: bool) -> Result<ExitStatus, Err
     save_config(&config).await?;
     crate::shim::invalidate_cache();
     for update in updates {
-        println!("\u{2713} {update}");
+        vp_shared::output::print_stdout_line(format_args!("\u{2713} {update}"));
     }
     Ok(ExitStatus::default())
 }
@@ -79,13 +81,17 @@ async fn show_default(scope: EnvScope) -> Result<ExitStatus, Error> {
         match config.default_node_version.as_deref() {
             Some(version) => {
                 has_configured_default = true;
-                println!("Default Node.js version: {version}");
+                vp_shared::output::print_stdout_line(format_args!(
+                    "Default Node.js version: {version}"
+                ));
                 if matches!(version, "lts" | "latest") {
                     let provider = vp_js_runtime::NodeProvider::new();
                     if let Ok(resolved) =
                         super::config::resolve_version_alias(version, &provider).await
                     {
-                        println!("  Currently resolves to: {resolved}");
+                        vp_shared::output::print_stdout_line(format_args!(
+                            "  Currently resolves to: {resolved}"
+                        ));
                     }
                 }
             }
@@ -93,13 +99,17 @@ async fn show_default(scope: EnvScope) -> Result<ExitStatus, Error> {
                 let provider = vp_js_runtime::NodeProvider::new();
                 match provider.resolve_latest_version().await {
                     Ok(version) => {
-                        println!(
+                        vp_shared::output::print_stdout_line(format_args!(
                             "No default Node.js version configured. Using latest LTS ({version})."
-                        );
+                        ));
                     }
-                    Err(_) => println!("No default Node.js version configured."),
+                    Err(_) => vp_shared::output::print_stdout_line(format_args!(
+                        "No default Node.js version configured."
+                    )),
                 }
-                println!("  Run 'vp env default <version>' to set a default.");
+                vp_shared::output::print_stdout_line(format_args!(
+                    "  Run 'vp env default <version>' to set a default."
+                ));
             }
         }
     }
@@ -115,20 +125,27 @@ async fn show_default(scope: EnvScope) -> Result<ExitStatus, Error> {
             .collect::<Vec<_>>();
         if configured.is_empty() {
             match scope {
-                EnvScope::PackageManager(kind) => {
-                    println!("Default {kind} version: not configured")
-                }
-                _ => println!("Package manager defaults: not configured"),
+                EnvScope::PackageManager(kind) => vp_shared::output::print_stdout_line(
+                    format_args!("Default {kind} version: not configured"),
+                ),
+                _ => vp_shared::output::print_stdout_line(format_args!(
+                    "Package manager defaults: not configured"
+                )),
             }
         } else {
             for (package_manager, version) in configured {
                 has_configured_default = true;
-                println!("Default {package_manager} version: {version}");
+                vp_shared::output::print_stdout_line(format_args!(
+                    "Default {package_manager} version: {version}"
+                ));
             }
         }
     }
     if has_configured_default {
-        println!("  Set via: {}", get_config_path()?.as_path().display());
+        vp_shared::output::print_stdout_line(format_args!(
+            "  Set via: {}",
+            get_config_path()?.as_path().display()
+        ));
     }
     Ok(ExitStatus::default())
 }

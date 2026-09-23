@@ -32,11 +32,16 @@ pub async fn execute(scope: Option<String>) -> Result<ExitStatus, Error> {
         EnvScope::PackageManagers => "Package-manager management".into(),
         EnvScope::PackageManager(package_manager) => format!("{package_manager} management"),
     };
-    println!("\u{2713} {component} set to managed.");
-    println!();
-    println!("Selected commands and shims will now use Vite+ managed tools.");
-    println!();
-    println!("Run {} to prefer system tools instead.", help::accent_command("vp env off"));
+    vp_shared::output::print_stdout_line(format_args!("\u{2713} {component} set to managed."));
+    vp_shared::output::print_stdout_line(format_args!(""));
+    vp_shared::output::print_stdout_line(format_args!(
+        "Selected commands and shims will now use Vite+ managed tools."
+    ));
+    vp_shared::output::print_stdout_line(format_args!(""));
+    vp_shared::output::print_stdout_line(format_args!(
+        "Run {} to prefer system tools instead.",
+        help::accent_command("vp env off")
+    ));
 
     Ok(ExitStatus::default())
 }

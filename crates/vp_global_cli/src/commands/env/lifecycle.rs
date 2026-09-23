@@ -52,9 +52,9 @@ pub(crate) async fn install(
             }
         };
         if let Some((version, from_session_override)) = resolved {
-            println!("Installing Node.js v{version}...");
+            vp_shared::output::print_stdout_line(format_args!("Installing Node.js v{version}..."));
             vp_js_runtime::download_runtime(vp_js_runtime::JsRuntimeType::Node, &version).await?;
-            println!("Installed Node.js v{version}");
+            vp_shared::output::print_stdout_line(format_args!("Installed Node.js v{version}"));
             if from_session_override {
                 eprintln!("Note: Installed from session override.");
                 eprintln!("Run `vp env use --unset` to revert to project version resolution.");
@@ -83,9 +83,9 @@ pub(crate) async fn install(
             })
         };
         if let Some((kind, version, hash)) = requested {
-            println!("Installing {kind} v{version}...");
+            vp_shared::output::print_stdout_line(format_args!("Installing {kind} v{version}..."));
             download_package_manager(kind, &version, hash.as_deref()).await?;
-            println!("Installed {kind} v{version}");
+            vp_shared::output::print_stdout_line(format_args!("Installed {kind} v{version}"));
         }
     }
 
@@ -133,7 +133,7 @@ pub(crate) async fn uninstall(specs: Vec<String>) -> Result<ExitStatus, Error> {
     }
     for (label, target) in targets {
         tokio::fs::remove_dir_all(target.as_path()).await?;
-        println!("Uninstalled {label}");
+        vp_shared::output::print_stdout_line(format_args!("Uninstalled {label}"));
     }
     Ok(ExitStatus::default())
 }

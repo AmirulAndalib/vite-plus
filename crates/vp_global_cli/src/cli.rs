@@ -1092,7 +1092,7 @@ pub async fn run_command_with_options(
         } else {
             command_with_help_with_options(render_options).print_help().ok();
         }
-        println!();
+        vp_shared::output::print_stdout_line(format_args!(""));
         // Return a successful exit status since help was requested implicitly
         return Ok(std::process::ExitStatus::default());
     };

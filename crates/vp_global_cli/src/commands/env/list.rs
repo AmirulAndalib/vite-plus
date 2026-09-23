@@ -118,10 +118,10 @@ pub async fn execute(
     };
 
     if json {
-        println!(
+        vp_shared::output::print_stdout_line(format_args!(
             "{}",
             serde_json::to_string_pretty(&InstalledEnvironmentJson { node, package_managers })?
-        );
+        ));
         return Ok(ExitStatus::default());
     }
 
@@ -132,7 +132,7 @@ pub async fn execute(
         for kind in package_manager::selected(scope) {
             let name = kind.to_string();
             if scope.includes_node() || kind != PackageManagerType::Npm {
-                println!();
+                vp_shared::output::print_stdout_line(format_args!(""));
             }
             print_section(
                 package_manager::title(kind),
@@ -164,9 +164,9 @@ pub(super) fn list_complete_package_manager_versions(
 }
 
 fn print_section(title: &str, versions: &[InstalledVersionJson], node: bool) {
-    println!("{title}");
+    vp_shared::output::print_stdout_line(format_args!("{title}"));
     if versions.is_empty() {
-        println!("  No versions installed.");
+        vp_shared::output::print_stdout_line(format_args!("  No versions installed."));
         return;
     }
     let colorize = use_color();
@@ -188,9 +188,12 @@ fn print_section(title: &str, versions: &[InstalledVersionJson], node: bool) {
         let display = if node { format!("v{}", version.version) } else { version.version.clone() };
         let line = format!("* {display}");
         if version.current && colorize {
-            println!("  {}{suffix}", style(&line).blue().bright());
+            vp_shared::output::print_stdout_line(format_args!(
+                "  {}{suffix}",
+                style(&line).blue().bright()
+            ));
         } else {
-            println!("  {line}{suffix}");
+            vp_shared::output::print_stdout_line(format_args!("  {line}{suffix}"));
         }
     }
 }

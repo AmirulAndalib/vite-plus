@@ -114,10 +114,16 @@ pub async fn execute(
         }
         if has_eval_wrapper() {
             if scope.includes_node() {
-                println!("{}", format_unset(&shell, VERSION_ENV_VAR));
+                vp_shared::output::print_stdout_line(format_args!(
+                    "{}",
+                    format_unset(&shell, VERSION_ENV_VAR)
+                ));
             }
             for kind in package_manager::selected(scope) {
-                println!("{}", format_unset(&shell, package_manager::version_env_var(kind)));
+                vp_shared::output::print_stdout_line(format_args!(
+                    "{}",
+                    format_unset(&shell, package_manager::version_env_var(kind))
+                ));
             }
         } else if !can_use_session_file() {
             print_windows_eval_wrapper_required();
@@ -233,22 +239,28 @@ pub async fn execute(
     if has_eval_wrapper() {
         if let Some((version, _)) = &node {
             config::delete_session_version().await?;
-            println!("{}", format_export(&shell, VERSION_ENV_VAR, version));
+            vp_shared::output::print_stdout_line(format_args!(
+                "{}",
+                format_export(&shell, VERSION_ENV_VAR, version)
+            ));
         }
         if let Some((kind, version, _, hash)) = &package_manager {
             config::delete_session_package_manager(*kind).await?;
-            println!(
+            vp_shared::output::print_stdout_line(format_args!(
                 "{}",
                 format_export(
                     &shell,
                     package_manager::version_env_var(*kind),
                     &package_manager_spec(version, hash.as_deref())?
                 )
-            );
+            ));
         } else if uses_project_environment && scope.includes_package_managers() {
             for kind in package_manager::selected(scope) {
                 config::delete_session_package_manager(kind).await?;
-                println!("{}", format_unset(&shell, package_manager::version_env_var(kind)));
+                vp_shared::output::print_stdout_line(format_args!(
+                    "{}",
+                    format_unset(&shell, package_manager::version_env_var(kind))
+                ));
             }
         }
     } else if !can_use_session_file() {

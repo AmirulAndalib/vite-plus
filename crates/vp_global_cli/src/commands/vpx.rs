@@ -62,7 +62,7 @@ pub async fn execute_vpx(args: &[String], cwd: &AbsolutePath) -> i32 {
 
     // Show help
     if flags.help {
-        println!("{VPX_HELP}");
+        vp_shared::output::print_stdout_line(format_args!("{VPX_HELP}"));
         return 0;
     }
 

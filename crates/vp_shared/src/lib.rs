@@ -1,11 +1,8 @@
 //! Shared utilities for vite-plus crates
 
-#![allow(
-    clippy::allow_attributes,
-    clippy::disallowed_macros,
-    clippy::disallowed_types,
-    clippy::print_stdout
-)]
+#![allow(clippy::allow_attributes)]
+#![allow(clippy::disallowed_macros)]
+#![allow(clippy::disallowed_types)]
 
 mod dirs;
 mod documentation;

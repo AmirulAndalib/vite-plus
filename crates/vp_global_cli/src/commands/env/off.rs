@@ -33,13 +33,16 @@ pub async fn execute(scope: Option<String>) -> Result<ExitStatus, Error> {
         EnvScope::PackageManagers => "Package-manager management".into(),
         EnvScope::PackageManager(package_manager) => format!("{package_manager} management"),
     };
-    println!("\u{2713} {component} set to system-first.");
-    println!();
-    println!(
+    vp_shared::output::print_stdout_line(format_args!("\u{2713} {component} set to system-first."));
+    vp_shared::output::print_stdout_line(format_args!(""));
+    vp_shared::output::print_stdout_line(format_args!(
         "Selected commands and shims will now prefer system tools, falling back to managed tools."
-    );
-    println!();
-    println!("Run {} to always use Vite+ managed tools.", help::accent_command("vp env on"));
+    ));
+    vp_shared::output::print_stdout_line(format_args!(""));
+    vp_shared::output::print_stdout_line(format_args!(
+        "Run {} to always use Vite+ managed tools.",
+        help::accent_command("vp env on")
+    ));
 
     Ok(ExitStatus::default())
 }

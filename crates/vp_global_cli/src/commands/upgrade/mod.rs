@@ -34,7 +34,7 @@ pub struct UpgradeOptions {
 }
 
 /// Execute the upgrade command.
-#[allow(clippy::print_stdout, clippy::print_stderr)]
+#[allow(clippy::print_stderr)]
 pub async fn execute(options: UpgradeOptions) -> Result<ExitStatus, Error> {
     if options.background_check {
         crate::upgrade_check::run_background_check().await;
@@ -91,10 +91,17 @@ pub async fn execute(options: UpgradeOptions) -> Result<ExitStatus, Error> {
     // Step 4: Handle --check (report and exit)
     if options.check {
         if resolved.version == current_version {
-            println!("\n{} Already up to date ({})", style(output::CHECK).green(), current_version);
+            vp_shared::output::print_stdout_line(format_args!(
+                "\n{} Already up to date ({})",
+                style(output::CHECK).green(),
+                current_version
+            ));
         } else {
-            println!("Update available: {} \u{2192} {}", current_version, resolved.version);
-            println!("Run `vp upgrade` to update.");
+            vp_shared::output::print_stdout_line(format_args!(
+                "Update available: {} \u{2192} {}",
+                current_version, resolved.version
+            ));
+            vp_shared::output::print_stdout_line(format_args!("Run `vp upgrade` to update."));
         }
         return Ok(ExitStatus::default());
     }
@@ -102,7 +109,11 @@ pub async fn execute(options: UpgradeOptions) -> Result<ExitStatus, Error> {
     // Step 5: Handle already up-to-date
     if resolved.version == current_version && !options.force {
         if !options.silent {
-            println!("\n{} Already up to date ({})", style(output::CHECK).green(), current_version);
+            vp_shared::output::print_stdout_line(format_args!(
+                "\n{} Already up to date ({})",
+                style(output::CHECK).green(),
+                current_version
+            ));
         }
         return Ok(ExitStatus::default());
     }
@@ -186,7 +197,7 @@ pub async fn execute(options: UpgradeOptions) -> Result<ExitStatus, Error> {
 }
 
 /// Core installation logic, separated for error cleanup.
-#[allow(clippy::print_stdout, clippy::print_stderr)]
+#[allow(clippy::print_stderr)]
 async fn install_platform_and_main(
     platform_data: &[u8],
     version_dir: &AbsolutePathBuf,
@@ -240,24 +251,24 @@ async fn install_platform_and_main(
     }
 
     if !silent {
-        println!(
+        vp_shared::output::print_stdout_line(format_args!(
             "\n{} Updated vite-plus from {} {} {}",
             style(output::CHECK).green(),
             current_version,
             output::ARROW,
             new_version
-        );
-        println!(
+        ));
+        vp_shared::output::print_stdout_line(format_args!(
             "\n  Release notes: https://github.com/voidzero-dev/vite-plus/releases/tag/v{}",
             new_version
-        );
+        ));
     }
 
     Ok(ExitStatus::default())
 }
 
 /// Execute rollback to the previous version.
-#[allow(clippy::print_stdout, clippy::print_stderr)]
+#[allow(clippy::print_stderr)]
 async fn execute_rollback(
     install_dir: &AbsolutePathBuf,
     silent: bool,
@@ -291,7 +302,11 @@ async fn execute_rollback(
     install::refresh_shims(install_dir).await?;
 
     if !silent {
-        println!("\n{} Rolled back to {}", style(output::CHECK).green(), previous);
+        vp_shared::output::print_stdout_line(format_args!(
+            "\n{} Rolled back to {}",
+            style(output::CHECK).green(),
+            previous
+        ));
     }
 
     Ok(ExitStatus::default())
