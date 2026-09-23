@@ -98,12 +98,12 @@ onBeforeUnmount(() => {
   <Teleport to="body">
     <dialog
       ref="dialogEl"
-      class="m-auto w-[min(48rem,calc(100vw-2rem))] max-h-[min(80vh,36rem)] rounded-xl border border-stroke bg-white p-0 text-primary shadow-xl backdrop:bg-black/40 dark:border-nickel dark:bg-slate dark:text-white"
+      class="m-auto w-[min(48rem,calc(100vw-2rem))] max-h-[min(80vh,36rem)] flex-col overflow-hidden rounded-xl border border-stroke bg-white p-0 text-primary shadow-xl open:flex backdrop:bg-black/40 dark:border-nickel dark:bg-slate dark:text-white"
       :aria-labelledby="titleId"
       @click="onDialogClick"
     >
-      <form class="flex max-h-[min(80vh,36rem)] flex-col" method="dialog">
-        <header class="flex items-center justify-between gap-4 px-5 pt-4 pb-3">
+      <form class="flex min-h-0 flex-col" method="dialog">
+        <header class="flex shrink-0 items-center justify-between gap-4 px-5 pt-4 pb-3">
           <h2 :id="titleId" class="m-0 text-base font-medium">Setup prompt</h2>
           <button
             type="submit"
@@ -116,7 +116,9 @@ onBeforeUnmount(() => {
         <pre
           class="m-0 overflow-auto px-5 pb-4 font-mono text-sm leading-relaxed break-words whitespace-pre-wrap"
           >{{ promptText }}</pre>
-        <footer class="flex justify-end border-t border-stroke px-5 py-3 dark:border-nickel">
+        <footer
+          class="flex shrink-0 justify-end border-t border-stroke px-5 py-3 dark:border-nickel"
+        >
           <button type="button" class="button" @mousedown="blurPointerTarget" @click="copyPrompt">
             <Icon :icon="copyIcon" class="size-4" aria-hidden="true" />
             <span>{{ copyLabel }}</span>
