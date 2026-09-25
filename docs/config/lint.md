@@ -1,6 +1,8 @@
 # Lint Config
 
-`vp lint` and `vp check` use the workspace-root `lint` block, including when run from a package directory. Package configs do not replace these lint settings. Use `vp lint -c <path>` or `vp lint --config <path>` to select another config. If the root config has no `lint` block, Oxlint uses [native discovery](/guide/lint#configuration). See [Oxlint's configuration](https://oxc.rs/docs/guide/usage/linter/config.html) for details.
+`vp lint` uses Oxlint's [native config discovery](/guide/lint#configuration) from the working directory. Use `vp lint -c <path>` or `vp lint --config <path>` to select another config. See [Oxlint's configuration](https://oxc.rs/docs/guide/usage/linter/config.html) for details.
+
+`vp check` uses the workspace-root `lint` block when it exists, including from a package directory. Package configs do not replace these lint settings in `vp check`.
 
 ## Example
 

@@ -20,9 +20,11 @@ vp fmt . --write
 
 Put formatting configuration directly in the `fmt` block in the root `vite.config.ts` so all your configuration stays in one place. We do not recommend using `.oxfmtrc.json` with Vite+.
 
-When the workspace-root config has a `fmt` block, `vp fmt` and `vp check` use it even when run from a package directory. Package configs cannot replace the root format settings. Commands keep the package working directory, so relative file arguments retain their meaning. Use [`fmt.overrides`](/guide/monorepo#format-overrides) for file- or package-specific options.
+`vp fmt` finds its config from the working directory, so package directories without their own `fmt` block use the root config. Relative file arguments retain their meaning. Use [`fmt.overrides`](/guide/monorepo#format-overrides) for file- or package-specific options instead of adding `fmt` blocks to package configs.
 
-An explicit `vp fmt -c <path>` or `vp fmt --config <path>` selects another config. Otherwise, when running from the workspace root or when the root config has no `fmt` block, Oxfmt discovers the nearest `vite.config.*` file with a `fmt` block. Supported extensions are `.js`, `.mjs`, `.ts`, `.cjs`, `.mts`, and `.cts`. Nested configs do not override settings for individual files.
+`vp check` uses the workspace-root `fmt` block when it exists, including from a package directory. Package configs cannot replace those format settings in `vp check`.
+
+An explicit `vp fmt -c <path>` or `vp fmt --config <path>` selects another config. Otherwise, Oxfmt discovers the nearest `vite.config.*` file with a `fmt` block. Supported extensions are `.js`, `.mjs`, `.ts`, `.cjs`, `.mts`, and `.cts`. Nested configs do not override settings for individual files.
 
 For editors, disable nested formatter configs to prevent per-file overrides:
 
